@@ -1,0 +1,6 @@
+[requires]
+glfw/3.3.4
+stb/cci.20210713
+
+[generators]
+cmake
