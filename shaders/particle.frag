@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 // The color of the line
 uniform vec4 u_color;

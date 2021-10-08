@@ -1,13 +1,11 @@
-#version 330 core
+#version 430 core
+
+// The color of the line
+uniform vec4 u_color;
+
 out vec4 FragColor;
-  
-in vec2 TexCoord;
 
-uniform sampler2D texture1;
-uniform sampler2D texture2;
-
-uniform float mixAmount;
 void main()
 {
-    FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), mixAmount);
+    FragColor = u_color;
 }
