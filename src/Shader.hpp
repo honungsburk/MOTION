@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
+#include "GLHelpers.hpp"
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -43,12 +43,14 @@ public:
     Shader(const char* computePath)
     {
         std::string computeCode = loadSourceCode(computePath);
+        glCheckError(); 
         unsigned int compute; compute = compileShaderCode("COMPUTE", computeCode);
-        glAttachShader(ID, compute);
+        glCheckError(); 
 
         // shader Program
         ID = glCreateProgram();
         glAttachShader(ID, compute);
+        glCheckError();
 
         glLinkProgram(ID);
         checkCompileErrors(ID, "PROGRAM");

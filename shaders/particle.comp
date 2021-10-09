@@ -1,0 +1,104 @@
+#version 430 core
+
+/////////////////// RANDOMNESS ////////////////////
+
+// Implementation found on StackOverflow: 
+// https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl#4275343
+
+// A single iteration of Bob Jenkins' One-At-A-Time hashing algorithm.
+uint hash( uint x ) {
+    x += ( x << 10u );
+    x ^= ( x >>  6u );
+    x += ( x <<  3u );
+    x ^= ( x >> 11u );
+    x += ( x << 15u );
+    return x;
+}
+
+// Compound versions of the hashing algorithm I whipped together.
+uint hash( uvec2 v ) { return hash( v.x ^ hash(v.y)                         ); }
+uint hash( uvec3 v ) { return hash( v.x ^ hash(v.y) ^ hash(v.z)             ); }
+uint hash( uvec4 v ) { return hash( v.x ^ hash(v.y) ^ hash(v.z) ^ hash(v.w) ); }
+
+
+
+// Construct a float with half-open range [0:1] using low 23 bits.
+// All zeroes yields 0.0, all ones yields the next smallest representable value below 1.0.
+float floatConstruct( uint m ) {
+    const uint ieeeMantissa = 0x007FFFFFu; // binary32 mantissa bitmask
+    const uint ieeeOne      = 0x3F800000u; // 1.0 in IEEE binary32
+
+    m &= ieeeMantissa;                     // Keep only mantissa bits (fractional part)
+    m |= ieeeOne;                          // Add fractional part to 1.0
+
+    float  f = uintBitsToFloat( m );       // Range [1:2]
+    return f - 1.0;                        // Range [0:1]
+}
+
+// Pseudo-random value in half-open range [0:1].
+float random( float x ) { return floatConstruct(hash(floatBitsToUint(x))); }
+float random( vec2  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
+float random( vec3  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
+float random( vec4  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
+
+///////////////////////// DATA //////////////////////////////////////////////////
+uniform int u_width;
+uniform int u_height;
+uniform float u_time;
+
+struct Particle{
+	vec2 pos;
+};
+
+layout(std430, binding = 1) buffer particleBuffer
+{
+	Particle particles[];
+};
+
+layout(std430, binding = 2) buffer vectorFieldBuffer
+{
+	vec2 vectorField[];
+};
+
+// Assumes they are laid out in rows...
+int calcPosition(int x, int y){
+	return x + y * u_width;
+}
+
+
+// Used for randomness
+//uniform int u_time;
+
+layout(local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+	uint i = gl_GlobalInvocationID.x;
+
+	vec2 pos = particles[i].pos;
+
+	// Find the 4 closest vectors
+	// We have to subtract with 1.0 becaause we need to have vectors all around us.
+	float f_width = float(u_width) - 1.0;
+	float f_height = float(u_height) - 1.0;
+	float x = (pos.x + 1.0) / 2.0 * f_width;
+	float y = (pos.y + 1.0) / 2.0  * f_height;
+	vec2 realPos = vec2(x, y);
+
+	// Use modulo instead?
+	if (x >= 0.0 && x < f_width && y >= 0.0 && y < f_height){
+		int x_index = int(x);
+		int y_index = int(y);
+		// The inverse of the distance. Lucklily every sqaure is exactly one unit.
+		vec2 xy_dist = realPos - floor(realPos);
+		// Interpolate the x-axis
+		vec2 r1 = vectorField[calcPosition(x_index, y_index)] * (1.0 - xy_dist.x) + vectorField[calcPosition(x_index + 1, y_index)] * xy_dist.x;
+		vec2 r2 = vectorField[calcPosition(x_index, y_index + 1)] * (1.0 - xy_dist.x) + vectorField[calcPosition(x_index + 1, y_index + 1)] * xy_dist.x;
+		// Interpolate the y-axis
+		vec2 velocity = r1 * (1.0 - xy_dist.y) + r2 * xy_dist.y;
+		particles[i].pos += velocity;
+	} else {
+		particles[i].pos = vec2(random(pos.x), random(pos.y)) * 2.0 - 1.0;
+	}
+
+}

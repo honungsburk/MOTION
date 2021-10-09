@@ -9,7 +9,8 @@
 #include "Shader.hpp" 
 #include "camera.h"
 #include "Arrow.hpp"
-
+#include "GLHelpers.hpp"
+#include <array>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -20,7 +21,7 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-
+GLenum glCheckError_(const char *file, int line);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 800;
@@ -49,7 +50,6 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_SAMPLES, 4);
-    // glEnable(GL_MULTISAMPLE);  
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -66,7 +66,7 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
+    //std::cout << glGetError() << std::endl; // returns 0 (no error)
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
@@ -80,23 +80,43 @@ int main()
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE); // enabled by default on some drivers, but not all so always enable to make sure
-
+    glCheckError(); 
     // build and compile our shader zprogram
     // ------------------------------------
     //Shader vectorFieldShader("../shaders/basic.vert", "../shaders/basic.frag");
-    Shader particleComputeShader("../shaders/particle.glsl");
+    Shader particleComputeShader("../shaders/particle.comp");
+    glCheckError(); 
     Shader particleShader("../shaders/particle.vert", "../shaders/particle.frag");
-
+    glCheckError(); 
     // Vector Field
-    // int vectorFieldDim = 9;
-    // Vector vectorField[vectorFieldDim][vectorFieldDim];
-    // for (int i = 0; i < vectorFieldDim; i++) {
-    //         for (int j = 0; j < vectorFieldDim; j++) {
-    //             vectorField[i][j].x = sin(i*M_PI/9);
-    //             vectorField[i][j].y = cos(i*M_PI/9);
-    //         }
-    // }
+    int vectorFieldDim = 9;
+    float vectorField[vectorFieldDim * vectorFieldDim * 2];
+    for (int i = 0; i < vectorFieldDim; i++) {
+            for (int j = 0; j < vectorFieldDim; j++) {
+                int position = (i * vectorFieldDim + j) * 2;
+                vectorField[position] = 0.01 * sin(i*M_PI/9.0f);
+                vectorField[position + 1] = 0.01 * cos(j*M_PI/9.0f);
+            }
+    }
+    particleComputeShader.use();
+    glCheckError(); 
+    particleComputeShader.setInt("u_width", vectorFieldDim);
+    glCheckError(); 
+    particleComputeShader.setInt("u_height", vectorFieldDim);
+    glCheckError(); 
+    //particleComputeShader.setVec2f("u_vectorField", *vectorField);
 
+    GLuint ssbo;
+    glGenBuffers(1, &ssbo);
+    glCheckError(); 
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    glCheckError(); 
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(vectorField), vectorField, GL_STATIC_DRAW); //sizeof(data) only works for statically sized C/C++ arrays.
+    glCheckError(); 
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbo);
+    glCheckError(); 
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
+    glCheckError(); 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     // float vertices[vectorFieldDim * vectorFieldDim * 7 * 3];
@@ -168,14 +188,18 @@ int main()
     particleShader.setMat4("view", view);
     particleShader.setMat4("projection", projection);
 
-    int numberOfParticles = 1024;
-    float particles[numberOfParticles* 2];
+    std::vector<float> particles;
+    int numberOfParticles = 1024 * 1024;
+    //float particles[numberOfParticles * 2];
     glPointSize(2.0f);
 
     for(int i = 0; i < numberOfParticles * 2; i++){
         // TODO: Use propeor good randomness instead...
-        particles[i] = static_cast <float> ( 2 * rand()) / static_cast <float> (RAND_MAX);
+        float pos = static_cast <float> ( 2 * rand()) / static_cast <float> (RAND_MAX);
+        particles.push_back(pos);
+        //particles[i] = pos;
     }
+    std::cout << particles.size() * 4 << std::endl;
     unsigned int PARTICLE_VAO, PARTICLE_VBO;
     glGenVertexArrays(1, &PARTICLE_VAO);
     glGenBuffers(1, &PARTICLE_VBO);
@@ -183,7 +207,8 @@ int main()
     glBindVertexArray(PARTICLE_VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, PARTICLE_VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, particles.size() * 4, particles.data(), GL_DYNAMIC_DRAW);
 
     // position attribute
     glEnableVertexAttribArray(0);
@@ -221,6 +246,7 @@ int main()
 
         // activate shader
         particleComputeShader.use();
+        particleShader.setFloat("u_time", currentFrame);
         glBindVertexArray(PARTICLE_VAO);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, PARTICLE_VBO);
         glDispatchCompute(numberOfParticles / 1024, 1, 1);
@@ -271,3 +297,4 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
+
