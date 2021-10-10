@@ -1,6 +1,8 @@
 #version 430 core
 
-/////////////////// RANDOMNESS ////////////////////
+/////////////////// 
+// RANDOMNESS 
+////////////////////
 
 // Implementation found on StackOverflow: 
 // https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl#4275343
@@ -41,7 +43,10 @@ float random( vec2  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
 float random( vec3  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
 float random( vec4  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
 
-///////////////////////// DATA //////////////////////////////////////////////////
+/////////////////// 
+// DATA 
+////////////////////
+
 uniform int u_width;
 uniform int u_height;
 uniform float u_time;
@@ -60,14 +65,20 @@ layout(std430, binding = 2) buffer vectorFieldBuffer
 	vec2 vectorField[];
 };
 
+/////////////////// 
+// Helper Functions
+////////////////////
+
 // Assumes they are laid out in rows...
 int calcPosition(int x, int y){
 	return x + y * u_width;
 }
 
 
-// Used for randomness
-//uniform int u_time;
+/////////////////// 
+// Main
+////////////////////
+
 
 layout(local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
 
@@ -85,7 +96,6 @@ void main()
 	float y = (pos.y + 1.0) / 2.0  * f_height;
 	vec2 realPos = vec2(x, y);
 
-	// Use modulo instead?
 	if (x >= 0.0 && x < f_width && y >= 0.0 && y < f_height){
 		int x_index = int(x);
 		int y_index = int(y);
@@ -98,6 +108,7 @@ void main()
 		vec2 velocity = r1 * (1.0 - xy_dist.y) + r2 * xy_dist.y;
 		particles[i].pos += velocity;
 	} else {
+		// Randomly reset the particle somewhere viewable
 		particles[i].pos = vec2(random(pos.x), random(pos.y)) * 2.0 - 1.0;
 	}
 

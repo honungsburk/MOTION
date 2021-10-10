@@ -3,9 +3,9 @@
 // The color of the line
 uniform vec4 u_color;
 
-out vec4 FragColor;
+layout(location = 0) out vec4 color;
 
 void main()
 {
-    FragColor = u_color;
+    color = u_color;
 }

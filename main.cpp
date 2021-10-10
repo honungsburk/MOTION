@@ -88,10 +88,10 @@ int main()
     glCheckError(); 
     Shader particleShader("../shaders/particle.vert", "../shaders/particle.frag");
     glCheckError(); 
-    Shader postprocessingShader( "../shaders/post-processing.vert", "../shaders/post-processing.frag" );
+    Shader postprocessingShader( "../shaders/passthrough.vert", "../shaders/simpletexture.frag" );
     glCheckError(); 
-    Shader postprocessingTrailShader( "../shaders/post-processing.vert", "../shaders/post-processing-trail.frag" );
-    glCheckError(); 
+
+
 
 
     // Vector Field
@@ -123,62 +123,6 @@ int main()
     glCheckError(); 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
     glCheckError(); 
-
-
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    // float vertices[vectorFieldDim * vectorFieldDim * 7 * 3];
-    // unsigned int indices[vectorFieldDim * vectorFieldDim  * 9];
-
-    // for (int i = 0; i < vectorFieldDim; i++) {
-    //     for (int j = 0; j < vectorFieldDim; j++) {
-    //         int verticesToCopy =  7 * 3;
-    //         int  verticesBase = (i * vectorFieldDim + j) * verticesToCopy;
-    //         float stepSize = 2.0f / float(vectorFieldDim - 1);
-    //         glm::vec3 arrowStart, arrowEnd;
-    //         arrowStart.x = float(i) * stepSize - 1.0f;
-    //         arrowStart.y = float(j) * stepSize - 1.0f;
-    //         arrowStart.z = 0.0;
-    //         arrowEnd.x = arrowStart.x + vectorField[i][j].x * 0.1;
-    //         arrowEnd.y = arrowStart.y + vectorField[i][j].y * 0.1;
-    //         arrowEnd.z = 0.0;
-
-    //         Arrow arrow(arrowStart, arrowEnd);
-
-    //         int indicesToCopy = 9;
-    //         int indicesBase = (i * vectorFieldDim + j) * indicesToCopy;
-
-    //         arrow.copyTo(vertices, verticesBase, indices, indicesBase);
-    //     }
-    // }
-
-    // unsigned int VBO, VAO, EBO;
-    // glGenVertexArrays(1, &VAO);
-    // glGenBuffers(1, &VBO);
-    // glGenBuffers(1, &EBO);
-
-    // glBindVertexArray(VAO);
-
-    // glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); 
-
-    // // position attribute
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-
-    // vectorFieldShader.use();
-    // Defined the camera position
-    // calculate the model matrix for each object and pass it to shader before drawing
-    // glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-    // model = glm::scale(model, glm::vec3(0.9, 0.9, 1.0));
-    // // model = glm::translate(model, cubePositions[i]);
-    // // float angle = 20.0f * i;
-    // // model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-    // vectorFieldShader.setMat4("model", model);
-
 
     // Set model
     // ------------------------------------
@@ -235,41 +179,6 @@ int main()
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, particleTexture, 0);  
     glBindTexture(GL_TEXTURE_2D, 0); // unbind
 
-    // Background FBO:s
-    // 
-    // We create two textures that we ping-pong between
-    // -------------------------------
-    GLuint backgroundFBOs[2];
-    glGenFramebuffers(2, backgroundFBOs);
-    GLuint backgroundTextures[2];
-    glGenTextures(2, backgroundTextures);
-
-    // Bind first FBO
-    glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[0]);
-    glBindTexture(GL_TEXTURE_2D, backgroundTextures[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, backgroundTextures[0], 0);  
-
-    // Bind second FBO
-    glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[1]);
-    glBindTexture(GL_TEXTURE_2D, backgroundTextures[1]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, backgroundTextures[1], 0);  
-
-    glBindTexture(GL_TEXTURE_2D, 0); // unbind
-
-
-
     // Set the list of draw buffers.
     // GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
     // glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
@@ -303,21 +212,19 @@ int main()
     glEnableVertexAttribArray(0);
     GLsizei quad_stride = 4 * sizeof(float);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, quad_stride, (void*)0);
-    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, quad_stride, (void*)(2 * sizeof(float)));
 
     // Shader Configuration
     // --------------------
     postprocessingShader.use();
+    postprocessingShader.setInt("screenTexture", 0);
 
-    postprocessingTrailShader.use();
+
 
     // Global Settings
     // ---------------
     glPointSize(2.0f);
-
-    //Used to pingpong between FBO:s
-    unsigned int pingPongFBOIndex = 0;
 
     // render loop
     // -----------
@@ -359,47 +266,18 @@ int main()
         glBindTexture(GL_TEXTURE_2D, particleTexture);
         glDrawArrays(GL_POINTS, 0, numberOfParticles);
 
-        // Add Trails Post-Processing
-        //
-        // The idea is to save the background in one of the FBO:s
-        // and reduce the alpha as we ping-pong back and forth.
-        // Not that this means we shouldn't be clearing the buffers.
-        // ------
-        unsigned int inTexture = pingPongFBOIndex;
-        unsigned int outTexture = (pingPongFBOIndex + 1) % 2;
-
-        glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[outTexture]);
-        postprocessingTrailShader.use();
-
-        postprocessingTrailShader.setInt("screenTexture", 0);
-        postprocessingTrailShader.setInt("trailTexture", 1);
-        postprocessingTrailShader.setVec4f("clearColor", 0.0f, 0.0f, 0.0f, 1.0f);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, particleTexture);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, backgroundTextures[inTexture]);
-
-        glBindVertexArray(POST_PROCESSING_VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        pingPongFBOIndex = outTexture;
-
         // Post-Processing
         // ------
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDisable(GL_DEPTH_TEST); // Make sure quad is rendered on top of all other
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
         postprocessingShader.use();
-        postprocessingShader.setInt("screenTexture", 0);
         glBindVertexArray(POST_PROCESSING_VAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, backgroundFBOs[outTexture]);
+        glBindTexture(GL_TEXTURE_2D, particleTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
