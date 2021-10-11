@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cmath>
+#include <functional>
+#include <tuple>
 
 #include "../include/glad/glad.h" 
 #include <GLFW/glfw3.h>
@@ -15,14 +17,33 @@
 #include <glm/gtx/string_cast.hpp>
 
 
+
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
+
+struct VectorField {
+    std::vector<float> data;
+    int width;
+    int height;
+};
+
+struct ParticleSystem { 
+    Shader shader;
+    VectorField vectorField;
+    unsigned int ssbo;
+};
+
+VectorField createVectorField(int width, int height, int resolution, int padding, std::function<std::tuple<float, float>(int, int)> f);
+ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vectorField);
+void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField);
+
 GLenum glCheckError_(const char *file, int line);
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 800;
+const unsigned int SCR_WIDTH = 1280 ;
+const unsigned int SCR_HEIGHT = 720;
+const unsigned int VECTOR_FIELD_RESOLUTION = 80;
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, -3.0f));
@@ -96,33 +117,12 @@ int main()
 
     // Vector Field
     // ------------------------------------
-    int vectorFieldDim = 9;
-    // float vectorField[vectorFieldDim * vectorFieldDim * 2];
-    std::vector<float> vectorField;
-    for (int i = 0; i < vectorFieldDim; i++) {
-            for (int j = 0; j < vectorFieldDim; j++) {
-                vectorField.push_back(0.01 * sin(i*M_PI/9.0f));
-                vectorField.push_back(0.01 * cos(j*M_PI/9.0f));
-            }
-    }
-    particleComputeShader.use();
-    glCheckError(); 
-    particleComputeShader.setInt("u_width", vectorFieldDim);
-    glCheckError(); 
-    particleComputeShader.setInt("u_height", vectorFieldDim);
-    glCheckError(); 
 
-    GLuint ssbo;
-    glGenBuffers(1, &ssbo);
-    glCheckError(); 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    glCheckError(); 
-    glBufferData(GL_SHADER_STORAGE_BUFFER, vectorField.size() * 4, vectorField.data(), GL_STATIC_DRAW); //sizeof(data) only works for statically sized C/C++ arrays.
-    glCheckError(); 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbo);
-    glCheckError(); 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
-    glCheckError(); 
+    auto rotationFn = [](float x, float y) { return std::make_tuple(0.01 * sin(x*M_PI/9.0f), 0.01 * cos(y*M_PI/9.0f)); };
+
+    VectorField vectorField = createVectorField(SCR_WIDTH, SCR_HEIGHT, VECTOR_FIELD_RESOLUTION, 0, rotationFn);
+
+    ParticleSystem particleSystem = initParticleSystem(particleComputeShader, vectorField);
 
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
@@ -319,6 +319,11 @@ int main()
     //Used to pingpong between FBO:s
     unsigned int pingPongFBOIndex = 0;
 
+    static GLubyte *pixels = NULL;
+    static png_byte *png_bytes = NULL;
+    static png_byte **png_rows = NULL;
+    unsigned int frameNbr = 0;
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -405,6 +410,15 @@ int main()
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
+    
+        // Save Image
+        //---------------------------------------------------------
+        // std::stringstream filename;
+        // filename << "../images/" << frameNbr << ".png" << std::endl;
+
+        // screenshot_png(filename.str().c_str(), SCR_WIDTH, SCR_HEIGHT, &pixels, &png_bytes, &png_rows);
+        // frameNbr += 1;
+
     }
 
     // optional: de-allocate all resources once they've outlived their purpose:
@@ -417,6 +431,77 @@ int main()
     glfwTerminate();
     return 0;
 }
+
+// Creates a vector field width a given resolution covering the the width and height.
+// Width - the width that the vector field has to cover in pixels 
+// Height - the hight that the vector field has to cover in pixels 
+// resolution - pixels between vectors
+// padding - number of extra layers of vectors to add on each side
+//
+// The padding is helpfull if you want the vector field to extend beyond the screen.
+// ------------------------------------------------------------------------------------
+VectorField createVectorField(int width, int height, int resolution, int padding, std::function<std::tuple<float, float>(int, int)> f)
+{
+
+    int vectorFieldWidth = (width / resolution) + padding * 2;
+    int vectorFieldHeight = (height / resolution) + padding * 2;
+
+    std::vector<float> vectorFieldData;
+    for (int i = 0; i < vectorFieldWidth; i++) {
+            for (int j = 0; j < vectorFieldHeight; j++) {
+                auto res = f(i, j);
+                vectorFieldData.push_back(std::get<0>(res));
+                vectorFieldData.push_back(std::get<1>(res));
+            }
+    }
+
+    return VectorField { vectorFieldData, vectorFieldWidth, vectorFieldHeight };
+}
+
+ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vectorField){
+    particleComputeShader.use();
+    glCheckError(); 
+    particleComputeShader.setInt("u_width", vectorField.width);
+    glCheckError(); 
+    particleComputeShader.setInt("u_height", vectorField.height);
+    glCheckError(); 
+
+    GLuint ssbo;
+    glGenBuffers(1, &ssbo);
+    glCheckError(); 
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    glCheckError(); 
+    glBufferData(GL_SHADER_STORAGE_BUFFER, vectorField.data.size() * 4, vectorField.data.data(), GL_STATIC_DRAW);
+    glCheckError(); 
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbo);
+    glCheckError(); 
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
+    glCheckError(); 
+
+    return ParticleSystem { particleComputeShader, vectorField, ssbo };
+
+}
+
+void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField){
+    particleSystem.shader.use();
+    glCheckError(); 
+    particleSystem.shader.setInt("u_width", vectorField.width);
+    glCheckError(); 
+    particleSystem.shader.setInt("u_height", vectorField.height);
+    glCheckError(); 
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleSystem.ssbo);
+    glCheckError(); 
+    glBufferData(GL_SHADER_STORAGE_BUFFER, vectorField.data.size() * 4, vectorField.data.data(), GL_STATIC_DRAW);
+    glCheckError(); 
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleSystem.ssbo);
+    glCheckError(); 
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
+    glCheckError(); 
+
+    particleSystem.vectorField = vectorField;
+}
+
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------

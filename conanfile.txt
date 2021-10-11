@@ -1,6 +1,7 @@
 [requires]
 glfw/3.3.4
 stb/cci.20210713
+libpng/1.6.37
 
 [generators]
 cmake
