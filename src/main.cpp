@@ -88,21 +88,21 @@ int main()
     glCheckError(); 
     Shader particleShader("../shaders/particle.vert", "../shaders/particle.frag");
     glCheckError(); 
-    Shader postprocessingShader( "../shaders/post-processing.vert", "../shaders/post-processing.frag" );
-    glCheckError(); 
     Shader postprocessingTrailShader( "../shaders/post-processing.vert", "../shaders/post-processing-trail.frag" );
+    glCheckError(); 
+    Shader postprocessingShader( "../shaders/post-processing.vert", "../shaders/post-processing.frag" );
     glCheckError(); 
 
 
     // Vector Field
     // ------------------------------------
     int vectorFieldDim = 9;
-    float vectorField[vectorFieldDim * vectorFieldDim * 2];
+    // float vectorField[vectorFieldDim * vectorFieldDim * 2];
+    std::vector<float> vectorField;
     for (int i = 0; i < vectorFieldDim; i++) {
             for (int j = 0; j < vectorFieldDim; j++) {
-                int position = (i * vectorFieldDim + j) * 2;
-                vectorField[position] = 0.01 * sin(i*M_PI/9.0f);
-                vectorField[position + 1] = 0.01 * cos(j*M_PI/9.0f);
+                vectorField.push_back(0.01 * sin(i*M_PI/9.0f));
+                vectorField.push_back(0.01 * cos(j*M_PI/9.0f));
             }
     }
     particleComputeShader.use();
@@ -117,7 +117,7 @@ int main()
     glCheckError(); 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
     glCheckError(); 
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(vectorField), vectorField, GL_STATIC_DRAW); //sizeof(data) only works for statically sized C/C++ arrays.
+    glBufferData(GL_SHADER_STORAGE_BUFFER, vectorField.size() * 4, vectorField.data(), GL_STATIC_DRAW); //sizeof(data) only works for statically sized C/C++ arrays.
     glCheckError(); 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbo);
     glCheckError(); 
