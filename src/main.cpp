@@ -16,9 +16,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-
-
-#include <iostream>
+#include "InputParser.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -41,9 +39,7 @@ void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField
 
 GLenum glCheckError_(const char *file, int line);
 // settings
-const unsigned int SCR_WIDTH = 1280 ;
-const unsigned int SCR_HEIGHT = 720;
-const unsigned int VECTOR_FIELD_RESOLUTION = 80;
+
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, -3.0f));
@@ -54,14 +50,36 @@ float lastFrame = 0.0f;
 
 //Location Vector
 
-struct Vector {
-    float x;
-    float y;
-};
+// struct Vector {
+//     float x;
+//     float y;
+// };
 
 
-int main()
+int main(int argc, char **argv)
 {
+    // Command line options
+    // ------------------------------
+    unsigned int SCR_WIDTH = 1200;
+    unsigned int SCR_HEIGHT = 1200;
+    unsigned int VECTOR_FIELD_RESOLUTION = 100;
+    
+    InputParser input(argc, argv);
+    
+    const std::string &width = input.getCmdOption("-w");
+    if (!width.empty()){
+        SCR_WIDTH = std::stoi( width );
+    }
+    const std::string &height = input.getCmdOption("-h");
+    if (!height.empty()){
+        SCR_HEIGHT = std::stoi( height );
+    }
+    const std::string &resolution = input.getCmdOption("-r");
+    if (!height.empty()){
+        VECTOR_FIELD_RESOLUTION = std::stoi( resolution );
+    }
+
+
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
