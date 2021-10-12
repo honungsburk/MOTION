@@ -29,13 +29,13 @@ public:
           generateVertices();
       }
 
-      void copyTo(float *otherVertices, int otherVerticesStart, unsigned int *otherIndices, int otherIndicesStart){
-            for(int i = 0; i < 7 * 3; i++){
-                otherVertices[otherVerticesStart + i] = verticies[i];
-            }
-            for(int i = 0; i < 9; i++){
-                otherIndices[otherIndicesStart + i] = (otherVerticesStart / 3) + indices[i];
-            }
+    void copyTo(float *otherVertices, int otherVerticesStart, unsigned int *otherIndices, int otherIndicesStart){
+        for(int i = 0; i < 7 * 3; i++){
+            otherVertices[otherVerticesStart + i] = verticies[i];
+        }
+        for(int i = 0; i < 9; i++){
+            otherIndices[otherIndicesStart + i] = (otherVerticesStart / 3) + indices[i];
+        }
       }
 
 private:

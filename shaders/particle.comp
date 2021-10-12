@@ -53,6 +53,7 @@ uniform float u_time;
 
 struct Particle{
 	vec2 pos;
+	vec4 color;
 };
 
 layout(std430, binding = 1) buffer particleBuffer

@@ -1,2 +1,7 @@
 build/
 images/
+audio/
+*.mp4
+*.png
+*.jpg
+*.jpeg

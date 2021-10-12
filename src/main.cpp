@@ -16,6 +16,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#include "CmdOptions.hpp"
 #include "InputParser.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -33,7 +34,10 @@ struct ParticleSystem {
     unsigned int ssbo;
 };
 
-VectorField createVectorField(int width, int height, int resolution, int padding, std::function<std::tuple<float, float>(int, int)> f);
+// enum VectorFieldFN { Rotate, Directional, blue };
+
+glm::vec4 fromHexColor(std::string hexColor);
+VectorField createVectorField(int width, int height, int resolution, int padding, std::function<std::tuple<float, float>(float, float, float, float)> f);
 ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vectorField);
 void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField);
 
@@ -60,24 +64,7 @@ int main(int argc, char **argv)
 {
     // Command line options
     // ------------------------------
-    unsigned int SCR_WIDTH = 1200;
-    unsigned int SCR_HEIGHT = 1200;
-    unsigned int VECTOR_FIELD_RESOLUTION = 100;
-    
-    InputParser input(argc, argv);
-    
-    const std::string &width = input.getCmdOption("-w");
-    if (!width.empty()){
-        SCR_WIDTH = std::stoi( width );
-    }
-    const std::string &height = input.getCmdOption("-h");
-    if (!height.empty()){
-        SCR_HEIGHT = std::stoi( height );
-    }
-    const std::string &resolution = input.getCmdOption("-r");
-    if (!height.empty()){
-        VECTOR_FIELD_RESOLUTION = std::stoi( resolution );
-    }
+   CmdOptions cmdOptions(argc, argv);
 
 
     // glfw: initialize and configure
@@ -94,7 +81,7 @@ int main(int argc, char **argv)
 
     // glfw window creation
     // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, "MOTION", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -119,7 +106,9 @@ int main(int argc, char **argv)
     glEnable(GL_MULTISAMPLE); // enabled by default on some drivers, but not all so always enable to make sure
     glCheckError(); 
 
-
+    // Global Settings
+    // ---------------
+    glPointSize(cmdOptions.POINT_SIZE);
 
     // Build and compile our shader programs
     // ------------------------------------
@@ -132,71 +121,29 @@ int main(int argc, char **argv)
     Shader postprocessingShader( "../shaders/post-processing.vert", "../shaders/post-processing.frag" );
     glCheckError(); 
 
-
     // Vector Field
     // ------------------------------------
 
-    auto rotationFn = [](float x, float y) { return std::make_tuple(0.01 * sin(x*M_PI/9.0f), 0.01 * cos(y*M_PI/9.0f)); };
+    std::function<std::tuple<float, float>(float, float, float, float)> vectorFieldFn; 
 
-    VectorField vectorField = createVectorField(SCR_WIDTH, SCR_HEIGHT, VECTOR_FIELD_RESOLUTION, 0, rotationFn);
+    vectorFieldFn = [](float x, float y, float width, float height) { return std::make_tuple(0.01 * sin(x*M_PI/9.0f), 0.01 * cos(y*M_PI/9.0f)); };
+    vectorFieldFn = [](float x, float y, float width, float height) { return std::make_tuple(0.01 * sin(x*M_PI/9.0f) + 0.01, 0.0); };
+    vectorFieldFn 
+        = [](float x, float y, float width, float height) { 
+                float center_x = width / 2;
+                float center_y = width / 2;
+                float max_length = sqrt(width*width + height*height) / 2.0;
+                return std::make_tuple(0.01 * (x - center_x) / max_length   , 0.01 * (y - center_y) / max_length ); 
+                };
+    vectorFieldFn 
+        = [](float x, float y, float width, float height) { 
+                float sign = -1.0f + 2.0f * ((int) y % 2);
+                return std::make_tuple(sign * 0.01, 0);
+                };
+
+    VectorField vectorField = createVectorField(cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, cmdOptions.VECTOR_FIELD_RESOLUTION, 0, vectorFieldFn);
 
     ParticleSystem particleSystem = initParticleSystem(particleComputeShader, vectorField);
-
-
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    // float vertices[vectorFieldDim * vectorFieldDim * 7 * 3];
-    // unsigned int indices[vectorFieldDim * vectorFieldDim  * 9];
-
-    // for (int i = 0; i < vectorFieldDim; i++) {
-    //     for (int j = 0; j < vectorFieldDim; j++) {
-    //         int verticesToCopy =  7 * 3;
-    //         int  verticesBase = (i * vectorFieldDim + j) * verticesToCopy;
-    //         float stepSize = 2.0f / float(vectorFieldDim - 1);
-    //         glm::vec3 arrowStart, arrowEnd;
-    //         arrowStart.x = float(i) * stepSize - 1.0f;
-    //         arrowStart.y = float(j) * stepSize - 1.0f;
-    //         arrowStart.z = 0.0;
-    //         arrowEnd.x = arrowStart.x + vectorField[i][j].x * 0.1;
-    //         arrowEnd.y = arrowStart.y + vectorField[i][j].y * 0.1;
-    //         arrowEnd.z = 0.0;
-
-    //         Arrow arrow(arrowStart, arrowEnd);
-
-    //         int indicesToCopy = 9;
-    //         int indicesBase = (i * vectorFieldDim + j) * indicesToCopy;
-
-    //         arrow.copyTo(vertices, verticesBase, indices, indicesBase);
-    //     }
-    // }
-
-    // unsigned int VBO, VAO, EBO;
-    // glGenVertexArrays(1, &VAO);
-    // glGenBuffers(1, &VBO);
-    // glGenBuffers(1, &EBO);
-
-    // glBindVertexArray(VAO);
-
-    // glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); 
-
-    // // position attribute
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-
-    // vectorFieldShader.use();
-    // Defined the camera position
-    // calculate the model matrix for each object and pass it to shader before drawing
-    // glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-    // model = glm::scale(model, glm::vec3(0.9, 0.9, 1.0));
-    // // model = glm::translate(model, cubePositions[i]);
-    // // float angle = 20.0f * i;
-    // // model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-    // vectorFieldShader.setMat4("model", model);
-
 
     // Set model
     // ------------------------------------
@@ -207,13 +154,25 @@ int main(int argc, char **argv)
     // Particles
     // ------------------------------------
     std::vector<float> particles;
-    int numberOfParticles = 1024;
-    //float particles[numberOfParticles * 2];
 
-    for(int i = 0; i < numberOfParticles * 2; i++){
-        // TODO: Use propeor good randomness instead...
-        float pos = static_cast <float> ( 2 * rand()) / static_cast <float> (RAND_MAX);
-        particles.push_back(pos);
+    for(int i = 0; i < cmdOptions.NUMBER_PARTICLES; i++){
+        // TODO: Use proper good randomness instead...
+
+        // Start position
+        float pos_x = static_cast <float> ( 2 * rand()) / static_cast <float> (RAND_MAX);
+        float pos_y = static_cast <float> ( 2 * rand()) / static_cast <float> (RAND_MAX);
+        particles.push_back(pos_x);
+        particles.push_back(pos_y);
+        
+        // Padding
+        particles.push_back(0.0);
+        particles.push_back(0.0);
+
+        // Color
+        particles.push_back(cmdOptions.COLOR_SCHEMA.particleColor.x);
+        particles.push_back(cmdOptions.COLOR_SCHEMA.particleColor.y);
+        particles.push_back(cmdOptions.COLOR_SCHEMA.particleColor.z);
+        particles.push_back(cmdOptions.COLOR_SCHEMA.particleColor.w);
     }
 
     unsigned int PARTICLE_VAO, PARTICLE_VBO;
@@ -224,8 +183,9 @@ int main(int argc, char **argv)
     glBindBuffer(GL_ARRAY_BUFFER, PARTICLE_VBO);
     glBufferData(GL_ARRAY_BUFFER, particles.size() * 4, particles.data(), GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (4 * sizeof(float)));
     // Allow particle.comp to update the particle positions
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, PARTICLE_VBO);
 
@@ -242,7 +202,7 @@ int main(int argc, char **argv)
     glBindTexture(GL_TEXTURE_2D, particleTexture);
 
     // Give an empty image to OpenGL ( the last "0" )
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
      // set the texture wrapping parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -265,7 +225,7 @@ int main(int argc, char **argv)
     // Bind first FBO
     glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[0]);
     glBindTexture(GL_TEXTURE_2D, backgroundTextures[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -276,7 +236,7 @@ int main(int argc, char **argv)
     // Bind second FBO
     glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[1]);
     glBindTexture(GL_TEXTURE_2D, backgroundTextures[1]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -330,9 +290,7 @@ int main(int argc, char **argv)
 
     postprocessingTrailShader.use();
 
-    // Global Settings
-    // ---------------
-    glPointSize(2.0f);
+
 
     //Used to pingpong between FBO:s
     unsigned int pingPongFBOIndex = 0;
@@ -362,7 +320,7 @@ int main(int argc, char **argv)
         particleShader.setFloat("u_time", currentFrame);
         glBindVertexArray(PARTICLE_VAO);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, PARTICLE_VBO);
-        glDispatchCompute(numberOfParticles / 1024, 1, 1);
+        glDispatchCompute(cmdOptions.NUMBER_PARTICLES / cmdOptions.NUMBER_COMPUTE_GROUPS, 1, 1);
 
 
         glMemoryBarrier(GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
@@ -372,15 +330,18 @@ int main(int argc, char **argv)
         glBindFramebuffer(GL_FRAMEBUFFER, particleFBO);
         glEnable(GL_DEPTH_TEST);
 
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor( cmdOptions.COLOR_SCHEMA.backgroundColor.x
+                    , cmdOptions.COLOR_SCHEMA.backgroundColor.y
+                    , cmdOptions.COLOR_SCHEMA.backgroundColor.z
+                    , cmdOptions.COLOR_SCHEMA.backgroundColor.w
+                    );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
         particleShader.use();
-        particleShader.setVec4f("u_color", 1.0f, 1.0f, 1.0f, 1.0f);
         glBindVertexArray(PARTICLE_VAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, particleTexture);
-        glDrawArrays(GL_POINTS, 0, numberOfParticles);
+        glDrawArrays(GL_POINTS, 0, cmdOptions.NUMBER_PARTICLES);
 
         // Add Trails Post-Processing
         //
@@ -396,7 +357,12 @@ int main(int argc, char **argv)
 
         postprocessingTrailShader.setInt("screenTexture", 0);
         postprocessingTrailShader.setInt("trailTexture", 1);
-        postprocessingTrailShader.setVec4f("clearColor", 0.0f, 0.0f, 0.0f, 1.0f);
+        postprocessingTrailShader.setVec4f( "clearColor"
+                                          , cmdOptions.COLOR_SCHEMA.backgroundColor.x
+                                          , cmdOptions.COLOR_SCHEMA.backgroundColor.y
+                                          , cmdOptions.COLOR_SCHEMA.backgroundColor.z
+                                          , cmdOptions.COLOR_SCHEMA.backgroundColor.w
+                                          );
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, particleTexture);
@@ -413,7 +379,11 @@ int main(int argc, char **argv)
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
         glDisable(GL_DEPTH_TEST); // Make sure quad is rendered on top of all other
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor( cmdOptions.COLOR_SCHEMA.backgroundColor.x
+                    , cmdOptions.COLOR_SCHEMA.backgroundColor.y
+                    , cmdOptions.COLOR_SCHEMA.backgroundColor.z
+                    , cmdOptions.COLOR_SCHEMA.backgroundColor.w
+                    );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
         postprocessingShader.use();
@@ -431,11 +401,19 @@ int main(int argc, char **argv)
     
         // Save Image
         //---------------------------------------------------------
-        // std::stringstream filename;
-        // filename << "../images/" << frameNbr << ".png" << std::endl;
+        if(cmdOptions.RECORD){
+            std::stringstream filename;
+            std::string fileNumber = std::to_string(frameNbr);
+            std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
+            filename << cmdOptions.RECORD_FOLDER.c_str() << new_string << ".png";
+            screenshot_png(filename.str().c_str(), cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, &pixels, &png_bytes, &png_rows);
+            std::cout << filename.str().c_str() << std::endl;
+            frameNbr += 1;
 
-        // screenshot_png(filename.str().c_str(), SCR_WIDTH, SCR_HEIGHT, &pixels, &png_bytes, &png_rows);
-        // frameNbr += 1;
+            if(cmdOptions.NUMBER_FRAMES_TO_RECORD == frameNbr){
+                return 0;
+            }
+        }
 
     }
 
@@ -458,7 +436,7 @@ int main(int argc, char **argv)
 //
 // The padding is helpfull if you want the vector field to extend beyond the screen.
 // ------------------------------------------------------------------------------------
-VectorField createVectorField(int width, int height, int resolution, int padding, std::function<std::tuple<float, float>(int, int)> f)
+VectorField createVectorField(int width, int height, int resolution, int padding, std::function<std::tuple<float, float>(float, float, float, float)> f)
 {
 
     int vectorFieldWidth = (width / resolution) + padding * 2;
@@ -467,7 +445,7 @@ VectorField createVectorField(int width, int height, int resolution, int padding
     std::vector<float> vectorFieldData;
     for (int i = 0; i < vectorFieldWidth; i++) {
             for (int j = 0; j < vectorFieldHeight; j++) {
-                auto res = f(i, j);
+                auto res = f(j, i, vectorFieldHeight, vectorFieldWidth);
                 vectorFieldData.push_back(std::get<0>(res));
                 vectorFieldData.push_back(std::get<1>(res));
             }
@@ -518,6 +496,17 @@ void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField
     glCheckError(); 
 
     particleSystem.vectorField = vectorField;
+}
+
+glm::vec4 fromHexColor(std::string hexColor){
+    unsigned int start = 1;
+    if(hexColor.length() == 6){
+        start = 0;
+    }
+    unsigned int r = std::stoul(hexColor.substr(start,2), nullptr, 16);
+    unsigned int g = std::stoul(hexColor.substr(start + 2,2), nullptr, 16);
+    unsigned int b = std::stoul(hexColor.substr(start + 4,2), nullptr, 16);
+    return glm::vec4((float) r / 255.0, (float) g / 255.0, (float) b / 255.0, 1.0);
 }
 
 
