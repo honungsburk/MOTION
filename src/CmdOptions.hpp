@@ -27,6 +27,8 @@ public:
     bool RECORD = false;
     std::string RECORD_FOLDER = "../images/";
     int NUMBER_FRAMES_TO_RECORD = -1;
+    unsigned int VECTOR_FIELD_FUNCTION= 0;
+    float PROBABILITY_TO_DIE = 0.0;
 
     CmdOptions(int argc, char **argv){
         InputParser input(argc, argv);
@@ -45,7 +47,7 @@ public:
     }
     const std::string &point_size = input.getCmdOption("--p-size");
     if (!height.empty()){
-        POINT_SIZE = std::stoi( point_size );
+        POINT_SIZE = std::stof( point_size );
     }
 
     const std::string &number_particles = input.getCmdOption("--nbr-particles");
@@ -73,6 +75,20 @@ public:
     if (input.cmdOptionExists("--record")){
         RECORD = true;
     }
+
+    const std::string &vector_field_function = input.getCmdOption("--vector-field-function");
+    if (!vector_field_function.empty()){
+        VECTOR_FIELD_FUNCTION = std::stoi(vector_field_function);
+    }
+
+    const std::string &probability_to_die = input.getCmdOption("--probability-to-die");
+    if (!probability_to_die.empty()){
+        PROBABILITY_TO_DIE = std::stof(probability_to_die);
+    }
+
+
+    // WARNINGS
+    // ----------------------------------------------------------------------------------------
 
     if(NUMBER_PARTICLES % NUMBER_COMPUTE_GROUPS!= 0){
         std::cout 

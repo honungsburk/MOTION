@@ -51,6 +51,8 @@ uniform int u_width;
 uniform int u_height;
 uniform float u_time;
 
+uniform float u_probability_to_die;
+
 struct Particle{
 	vec2 pos;
 	vec4 color;
@@ -113,4 +115,7 @@ void main()
 		particles[i].pos = vec2(random(pos.x), random(pos.y)) * 2.0 - 1.0;
 	}
 
+	if(random(vec3(u_time, pos)) <= u_probability_to_die){
+		particles[i].pos = vec2(random(pos.x), random(pos.y)) * 2.0 - 1.0;
+	}
 }

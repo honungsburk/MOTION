@@ -7,7 +7,6 @@
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
 #include "Shader.hpp" 
-#include "camera.h"
 #include "Arrow.hpp"
 #include "GLHelpers.hpp"
 #include <array>
@@ -44,9 +43,6 @@ void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField
 GLenum glCheckError_(const char *file, int line);
 // settings
 
-
-// camera
-Camera camera(glm::vec3(0.0f, 0.0f, -3.0f));
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -126,20 +122,31 @@ int main(int argc, char **argv)
 
     std::function<std::tuple<float, float>(float, float, float, float)> vectorFieldFn; 
 
-    vectorFieldFn = [](float x, float y, float width, float height) { return std::make_tuple(0.01 * sin(x*M_PI/9.0f), 0.01 * cos(y*M_PI/9.0f)); };
-    vectorFieldFn = [](float x, float y, float width, float height) { return std::make_tuple(0.01 * sin(x*M_PI/9.0f) + 0.01, 0.0); };
-    vectorFieldFn 
-        = [](float x, float y, float width, float height) { 
-                float center_x = width / 2;
-                float center_y = width / 2;
-                float max_length = sqrt(width*width + height*height) / 2.0;
-                return std::make_tuple(0.01 * (x - center_x) / max_length   , 0.01 * (y - center_y) / max_length ); 
-                };
-    vectorFieldFn 
-        = [](float x, float y, float width, float height) { 
-                float sign = -1.0f + 2.0f * ((int) y % 2);
-                return std::make_tuple(sign * 0.01, 0);
-                };
+   switch(cmdOptions.VECTOR_FIELD_FUNCTION) {
+    case 0 : vectorFieldFn 
+                = [](float x, float y, float width, float height) { 
+                        return std::make_tuple(0.01 * sin(x*M_PI/9.0f), 0.01 * cos(y*M_PI/9.0f)); 
+                        };
+             break;       // and exits the switch
+    case 1 : vectorFieldFn 
+                = [](float x, float y, float width, float height) { 
+                        return std::make_tuple(0.01 * sin(x*M_PI/9.0f) + 0.01, 0.0); 
+                        };
+             break;
+    case 2 : vectorFieldFn 
+                = [](float x, float y, float width, float height) { 
+                        float center_x = width / 2;
+                        float center_y = width / 2;
+                        float max_length = sqrt(width*width + height*height) / 2.0;
+                        return std::make_tuple(0.01 * (x - center_x) / max_length   , 0.01 * (y - center_y) / max_length ); 
+                        };
+            break;
+    case 3 : vectorFieldFn 
+                = [](float x, float y, float width, float height) { 
+                        float sign = -1.0f + 2.0f * ((int) y % 2);
+                        return std::make_tuple(sign * 0.01, 0);
+                        };
+}
 
     VectorField vectorField = createVectorField(cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, cmdOptions.VECTOR_FIELD_RESOLUTION, 0, vectorFieldFn);
 
@@ -299,7 +306,7 @@ int main(int argc, char **argv)
     static png_byte *png_bytes = NULL;
     static png_byte **png_rows = NULL;
     unsigned int frameNbr = 0;
-
+        std::cout << "u_probability_to_die: " << cmdOptions.PROBABILITY_TO_DIE << "\n";
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -317,7 +324,8 @@ int main(int argc, char **argv)
         // Update Particle Positions
         // ------
         particleComputeShader.use();
-        particleShader.setFloat("u_time", currentFrame);
+        particleComputeShader.setFloat("u_time", currentFrame);
+        particleComputeShader.setFloat("u_probability_to_die", cmdOptions.PROBABILITY_TO_DIE);
         glBindVertexArray(PARTICLE_VAO);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, PARTICLE_VBO);
         glDispatchCompute(cmdOptions.NUMBER_PARTICLES / cmdOptions.NUMBER_COMPUTE_GROUPS, 1, 1);
