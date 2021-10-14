@@ -18,6 +18,8 @@
 #include "CmdOptions.hpp"
 #include "InputParser.hpp"
 
+#include <iostream>
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 
@@ -48,19 +50,23 @@ GLenum glCheckError_(const char *file, int line);
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
-//Location Vector
-
-// struct Vector {
-//     float x;
-//     float y;
-// };
-
 
 int main(int argc, char **argv)
 {
-    // Command line options
-    // ------------------------------
-   CmdOptions cmdOptions(argc, argv);
+
+        // Command line options
+        // ------------------------------
+    CmdOptions cmdOptions(argc, argv);
+
+    if(cmdOptions.show_help){
+        std::cout << cmdOptions.cmdline_options << '\n';
+        return EXIT_SUCCESS;
+    }
+
+    if(cmdOptions.show_version){
+        std::cout << "Motion v0.2.0" << '\n';
+        return EXIT_SUCCESS;
+    }
 
 
     // glfw: initialize and configure
@@ -77,7 +83,7 @@ int main(int argc, char **argv)
 
     // glfw window creation
     // --------------------
-    GLFWwindow* window = glfwCreateWindow(cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, "MOTION", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(cmdOptions.width, cmdOptions.height, "MOTION", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -104,7 +110,7 @@ int main(int argc, char **argv)
 
     // Global Settings
     // ---------------
-    glPointSize(cmdOptions.POINT_SIZE);
+    glPointSize(cmdOptions.point_size);
 
     // Build and compile our shader programs
     // ------------------------------------
@@ -122,7 +128,7 @@ int main(int argc, char **argv)
 
     std::function<std::tuple<float, float>(float, float, float, float)> vectorFieldFn; 
 
-   switch(cmdOptions.VECTOR_FIELD_FUNCTION) {
+   switch(cmdOptions.vector_field_function) {
     case 0 : vectorFieldFn 
                 = [](float x, float y, float width, float height) { 
                         return std::make_tuple(0.01 * sin(x*M_PI/9.0f), 0.01 * cos(y*M_PI/9.0f)); 
@@ -146,9 +152,17 @@ int main(int argc, char **argv)
                         float sign = -1.0f + 2.0f * ((int) y % 2);
                         return std::make_tuple(sign * 0.01, 0);
                         };
-}
+            break;
+    case 4 : vectorFieldFn 
+                = [](float x, float y, float width, float height) { 
+                        float x_ = x / width * 0.01;
+                        float y_ = y / height * 0.01;
+                        return std::make_tuple(x_ + y_, y_ - x_);
+                        };
+            break;
+    }
 
-    VectorField vectorField = createVectorField(cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, cmdOptions.VECTOR_FIELD_RESOLUTION, 0, vectorFieldFn);
+    VectorField vectorField = createVectorField(cmdOptions.width, cmdOptions.height, cmdOptions.grid_resolution, 0, vectorFieldFn);
 
     ParticleSystem particleSystem = initParticleSystem(particleComputeShader, vectorField);
 
@@ -162,7 +176,7 @@ int main(int argc, char **argv)
     // ------------------------------------
     std::vector<float> particles;
 
-    for(int i = 0; i < cmdOptions.NUMBER_PARTICLES; i++){
+    for(int i = 0; i < cmdOptions.nbr_particles; i++){
         // TODO: Use proper good randomness instead...
 
         // Start position
@@ -176,10 +190,10 @@ int main(int argc, char **argv)
         particles.push_back(0.0);
 
         // Color
-        particles.push_back(cmdOptions.COLOR_SCHEMA.particleColor.x);
-        particles.push_back(cmdOptions.COLOR_SCHEMA.particleColor.y);
-        particles.push_back(cmdOptions.COLOR_SCHEMA.particleColor.z);
-        particles.push_back(cmdOptions.COLOR_SCHEMA.particleColor.w);
+        particles.push_back(cmdOptions.particle_color.x);
+        particles.push_back(cmdOptions.particle_color.y);
+        particles.push_back(cmdOptions.particle_color.z);
+        particles.push_back(cmdOptions.particle_color.w);
     }
 
     unsigned int PARTICLE_VAO, PARTICLE_VBO;
@@ -209,7 +223,7 @@ int main(int argc, char **argv)
     glBindTexture(GL_TEXTURE_2D, particleTexture);
 
     // Give an empty image to OpenGL ( the last "0" )
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.width, cmdOptions.height, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
      // set the texture wrapping parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -232,7 +246,7 @@ int main(int argc, char **argv)
     // Bind first FBO
     glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[0]);
     glBindTexture(GL_TEXTURE_2D, backgroundTextures[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.width, cmdOptions.height, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -243,7 +257,7 @@ int main(int argc, char **argv)
     // Bind second FBO
     glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[1]);
     glBindTexture(GL_TEXTURE_2D, backgroundTextures[1]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.width, cmdOptions.height, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -306,7 +320,7 @@ int main(int argc, char **argv)
     static png_byte *png_bytes = NULL;
     static png_byte **png_rows = NULL;
     unsigned int frameNbr = 0;
-        std::cout << "u_probability_to_die: " << cmdOptions.PROBABILITY_TO_DIE << "\n";
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -325,10 +339,16 @@ int main(int argc, char **argv)
         // ------
         particleComputeShader.use();
         particleComputeShader.setFloat("u_time", currentFrame);
-        particleComputeShader.setFloat("u_probability_to_die", cmdOptions.PROBABILITY_TO_DIE);
+        particleComputeShader.setFloat("u_probability_to_die", cmdOptions.probability_to_die);
+
+        particleComputeShader.setBool("u_angle_color", true);
+
+        particleComputeShader.setVec3f("u_cc", 0.3, 0.6, 0.9);
+        particleComputeShader.setVec3f("u_dd", 0.3, 1.6, 2.9);
+
         glBindVertexArray(PARTICLE_VAO);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, PARTICLE_VBO);
-        glDispatchCompute(cmdOptions.NUMBER_PARTICLES / cmdOptions.NUMBER_COMPUTE_GROUPS, 1, 1);
+        glDispatchCompute(cmdOptions.nbr_particles / cmdOptions.nbr_compute_groups, 1, 1);
 
 
         glMemoryBarrier(GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
@@ -338,10 +358,10 @@ int main(int argc, char **argv)
         glBindFramebuffer(GL_FRAMEBUFFER, particleFBO);
         glEnable(GL_DEPTH_TEST);
 
-        glClearColor( cmdOptions.COLOR_SCHEMA.backgroundColor.x
-                    , cmdOptions.COLOR_SCHEMA.backgroundColor.y
-                    , cmdOptions.COLOR_SCHEMA.backgroundColor.z
-                    , cmdOptions.COLOR_SCHEMA.backgroundColor.w
+        glClearColor( cmdOptions.background_color.x
+                    , cmdOptions.background_color.y
+                    , cmdOptions.background_color.z
+                    , cmdOptions.background_color.w
                     );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
@@ -349,7 +369,7 @@ int main(int argc, char **argv)
         glBindVertexArray(PARTICLE_VAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, particleTexture);
-        glDrawArrays(GL_POINTS, 0, cmdOptions.NUMBER_PARTICLES);
+        glDrawArrays(GL_POINTS, 0, cmdOptions.nbr_particles);
 
         // Add Trails Post-Processing
         //
@@ -365,12 +385,13 @@ int main(int argc, char **argv)
 
         postprocessingTrailShader.setInt("screenTexture", 0);
         postprocessingTrailShader.setInt("trailTexture", 1);
-        postprocessingTrailShader.setVec4f( "clearColor"
-                                          , cmdOptions.COLOR_SCHEMA.backgroundColor.x
-                                          , cmdOptions.COLOR_SCHEMA.backgroundColor.y
-                                          , cmdOptions.COLOR_SCHEMA.backgroundColor.z
-                                          , cmdOptions.COLOR_SCHEMA.backgroundColor.w
+        postprocessingTrailShader.setVec4f( "u_clearColor"
+                                          , cmdOptions.background_color.x
+                                          , cmdOptions.background_color.y
+                                          , cmdOptions.background_color.z
+                                          , cmdOptions.background_color.w
                                           );
+        postprocessingTrailShader.setFloat("u_trail_mix", cmdOptions.trail_mix_rate);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, particleTexture);
@@ -387,10 +408,10 @@ int main(int argc, char **argv)
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
         glDisable(GL_DEPTH_TEST); // Make sure quad is rendered on top of all other
-        glClearColor( cmdOptions.COLOR_SCHEMA.backgroundColor.x
-                    , cmdOptions.COLOR_SCHEMA.backgroundColor.y
-                    , cmdOptions.COLOR_SCHEMA.backgroundColor.z
-                    , cmdOptions.COLOR_SCHEMA.backgroundColor.w
+        glClearColor( cmdOptions.background_color.x
+                    , cmdOptions.background_color.y
+                    , cmdOptions.background_color.z
+                    , cmdOptions.background_color.w
                     );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
@@ -409,16 +430,16 @@ int main(int argc, char **argv)
     
         // Save Image
         //---------------------------------------------------------
-        if(cmdOptions.RECORD){
+        if(cmdOptions.record){
             std::stringstream filename;
             std::string fileNumber = std::to_string(frameNbr);
             std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
-            filename << cmdOptions.RECORD_FOLDER.c_str() << new_string << ".png";
-            screenshot_png(filename.str().c_str(), cmdOptions.SCR_WIDTH, cmdOptions.SCR_HEIGHT, &pixels, &png_bytes, &png_rows);
+            filename << cmdOptions.record_folder.c_str() << new_string << ".png";
+            screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
             std::cout << filename.str().c_str() << std::endl;
             frameNbr += 1;
 
-            if(cmdOptions.NUMBER_FRAMES_TO_RECORD == frameNbr){
+            if(cmdOptions.nbr_frames_to_record == frameNbr){
                 return 0;
             }
         }
@@ -453,7 +474,7 @@ VectorField createVectorField(int width, int height, int resolution, int padding
     std::vector<float> vectorFieldData;
     for (int i = 0; i < vectorFieldWidth; i++) {
             for (int j = 0; j < vectorFieldHeight; j++) {
-                auto res = f(j, i, vectorFieldHeight, vectorFieldWidth);
+                auto res = f(i, j, vectorFieldWidth, vectorFieldHeight);
                 vectorFieldData.push_back(std::get<0>(res));
                 vectorFieldData.push_back(std::get<1>(res));
             }

@@ -5,14 +5,15 @@ out vec4 color;
 uniform sampler2D screenTexture;
 uniform sampler2D trailTexture;
 
-uniform vec4 clearColor;
+uniform vec4 u_clearColor;
+uniform float u_trail_mix;
 
 void main()
 { 
     vec4 trail = texture(trailTexture, TexCoords);
     vec4 particle = texture(screenTexture, TexCoords);
-    if (particle == clearColor) {
-        color = mix(particle, trail, 0.90);
+    if (particle == u_clearColor) {
+        color = mix(particle, trail, u_trail_mix);
     } else {
         color = particle;
     }

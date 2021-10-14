@@ -51,6 +51,10 @@ uniform int u_width;
 uniform int u_height;
 uniform float u_time;
 
+uniform bool u_angle_color;
+uniform vec3 u_cc;
+uniform vec3 u_dd;
+
 uniform float u_probability_to_die;
 
 struct Particle{
@@ -77,6 +81,9 @@ int calcPosition(int x, int y){
 	return x + y * u_width;
 }
 
+vec3 cos_color(in float f, in vec3 a, in vec3 b, in vec3 c, in vec3 d) {
+    return a + b * cos(f * c + d);
+}
 
 /////////////////// 
 // Main
@@ -99,23 +106,32 @@ void main()
 	float y = (pos.y + 1.0) / 2.0  * f_height;
 	vec2 realPos = vec2(x, y);
 
-	if (x >= 0.0 && x < f_width && y >= 0.0 && y < f_height){
-		int x_index = int(x);
-		int y_index = int(y);
-		// The inverse of the distance. Lucklily every sqaure is exactly one unit.
-		vec2 xy_dist = realPos - floor(realPos);
-		// Interpolate the x-axis
-		vec2 r1 = vectorField[calcPosition(x_index, y_index)] * (1.0 - xy_dist.x) + vectorField[calcPosition(x_index + 1, y_index)] * xy_dist.x;
-		vec2 r2 = vectorField[calcPosition(x_index, y_index + 1)] * (1.0 - xy_dist.x) + vectorField[calcPosition(x_index + 1, y_index + 1)] * xy_dist.x;
-		// Interpolate the y-axis
-		vec2 velocity = r1 * (1.0 - xy_dist.y) + r2 * xy_dist.y;
-		particles[i].pos += velocity;
-	} else {
+	bool inside_vector_field =(x >= 0.0 && x < f_width && y >= 0.0 && y < f_height);
+	bool random_death = random(vec3(u_time, pos)) <= u_probability_to_die;
+
+	if ( !inside_vector_field || random_death){
 		// Randomly reset the particle somewhere viewable
 		particles[i].pos = vec2(random(pos.x), random(pos.y)) * 2.0 - 1.0;
 	}
+	
+	int x_index = int(x);
+	int y_index = int(y);
+	// The inverse of the distance. Lucklily every sqaure is exactly one unit.
+	vec2 xy_dist = realPos - floor(realPos);
+	// Interpolate the x-axis
+	vec2 r1 = vectorField[calcPosition(x_index, y_index)] * (1.0 - xy_dist.x) + vectorField[calcPosition(x_index + 1, y_index)] * xy_dist.x;
+	vec2 r2 = vectorField[calcPosition(x_index, y_index + 1)] * (1.0 - xy_dist.x) + vectorField[calcPosition(x_index + 1, y_index + 1)] * xy_dist.x;
+	// Interpolate the y-axis
+	vec2 velocity = r1 * (1.0 - xy_dist.y) + r2 * xy_dist.y;
+	particles[i].pos += velocity;
 
-	if(random(vec3(u_time, pos)) <= u_probability_to_die){
-		particles[i].pos = vec2(random(pos.x), random(pos.y)) * 2.0 - 1.0;
+	if(u_angle_color){
+		// Ensures the output is between 0-1
+		vec3 aa = vec3(0.5);
+		vec3 bb = vec3(0.5);
+		float angle = acos(dot(normalize(velocity), normalize(particles[i].pos + vec2(1.1, 0.0))));
+
+		particles[i].color = vec4(cos_color(angle, aa, bb, u_cc, u_dd), 1.0);
 	}
+
 }

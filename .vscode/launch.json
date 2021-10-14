@@ -9,7 +9,8 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/bin/VectorFieldParticleSystem",
-            "args": [],
+            "args": [
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [],

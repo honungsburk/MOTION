@@ -1,0 +1,10 @@
+vector-field-function = 3 
+probability-to-die = 0.01 
+trail-mix-rate = 0.8 
+width = 720 
+height = 720 
+grid-resolution = 80  
+point-size = 4.0 
+nbr-particles = 10240 
+particle-color = f3e0ec 
+background-color = 44223e
