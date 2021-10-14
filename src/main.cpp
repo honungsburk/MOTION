@@ -17,6 +17,9 @@
 
 #include "CmdOptions.hpp"
 #include "InputParser.hpp"
+// #include "VideoCapture.hpp"
+#include <opencv2/videoio.hpp>
+
 
 #include <iostream>
 
@@ -321,9 +324,26 @@ int main(int argc, char **argv)
     static png_byte **png_rows = NULL;
     unsigned int frameNbr = 0;
 
+    bool shouldRecord = cmdOptions.record;
+    // VideoCapture frameRecorder( cmdOptions.record_to_file.c_str()
+    //                           , cmdOptions.codec_name.c_str()
+    //                           , cmdOptions.width
+    //                           , cmdOptions.height
+    //                           , cmdOptions.framerate
+    //                           , cmdOptions.bitrate
+    //                           );
+
+    cv::VideoWriter outputVideo( "/home/frank/git/vector-field-particle-system/video.mp4"   // Video Name
+                                , cv::VideoWriter::fourcc('M', 'P', '4', 'V')               // fourcc 
+                                , 30.0f                                                     // Frame Rate 
+                                , cv::Size( cmdOptions.width, cmdOptions.height )           // Frame Size of the Video 
+                                , true                                                      // Is Color                
+                                );
+    
+    bool exit = false;
     // render loop
     // -----------
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(window) && !exit )
     {
         // per-frame time logic
         // --------------------
@@ -430,21 +450,39 @@ int main(int argc, char **argv)
     
         // Save Image
         //---------------------------------------------------------
-        if(cmdOptions.record){
-            std::stringstream filename;
-            std::string fileNumber = std::to_string(frameNbr);
-            std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
-            filename << cmdOptions.record_folder.c_str() << new_string << ".png";
-            screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
-            std::cout << filename.str().c_str() << std::endl;
-            frameNbr += 1;
+        if(shouldRecord){
+            // std::stringstream filename;
+            // std::string fileNumber = std::to_string(frameNbr);
+            // std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
+            // filename << cmdOptions.record_folder.c_str() << new_string << ".png";
+            // screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
+            // std::cout << filename.str().c_str() << std::endl;
 
+            // glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data);
+            //frameRecorder.addFrame();
+
+            cv::Mat pixels( cmdOptions.height, cmdOptions.width, CV_8UC3 );
+            glReadPixels(0, 0, cmdOptions.width, cmdOptions.height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data );
+            cv::Mat cv_pixels( cmdOptions.height, cmdOptions.width, CV_8UC3 );
+            for( int y=0; y<cmdOptions.height; y++ ) for( int x=0; x<cmdOptions.width; x++ ) 
+            {
+                cv_pixels.at<cv::Vec3b>(y,x)[2] = pixels.at<cv::Vec3b>(cmdOptions.height-y-1,x)[0];
+                cv_pixels.at<cv::Vec3b>(y,x)[1] = pixels.at<cv::Vec3b>(cmdOptions.height-y-1,x)[1];
+                cv_pixels.at<cv::Vec3b>(y,x)[0] = pixels.at<cv::Vec3b>(cmdOptions.height-y-1,x)[2];
+            }
+            outputVideo.write(cv_pixels);
+
+
+            
+            frameNbr += 1;
             if(cmdOptions.nbr_frames_to_record == frameNbr){
-                return 0;
+                exit = true;
             }
         }
 
     }
+
+    outputVideo.release();
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------

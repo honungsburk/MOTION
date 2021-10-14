@@ -10,6 +10,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/bin/VectorFieldParticleSystem",
             "args": [
+                "--config", "../configs/config-1.txt",
+                "--height", "1280"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",

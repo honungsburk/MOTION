@@ -37,6 +37,10 @@ public:
     float trail_mix_rate = 0.9;
 
     std::string record_folder = "../images/";
+    std::string record_to_file = "../motion.mp4";
+    std::string codec_name = "265/HVEC";
+    unsigned int framerate = 30;
+    unsigned int bitrate = 800000;
 
 
     options_description cmdline_options{"Motion Options"};
