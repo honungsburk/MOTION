@@ -86,7 +86,7 @@ layout(std430, binding = 2) buffer vectorFieldBuffer
 ////////////////////
 
 // Assumes they are laid out in columns...
-int calcPosition(int x, int y){
+int calcVectorPosition(int x, int y){
 	return x * u_height + y ;
 }
 
@@ -128,15 +128,21 @@ void main()
 			// Randomly reset the particle somewhere viewable
 			vec2 random_pos = vec2(random(pos.x), random(pos.y)) * 2.0 - 1.0;
 			particles[i].pos_loop = vec4(random_pos, particle.pos_loop.zw);
+
+			pos = particles[i].pos_loop.xy;
+			x = (pos.x + 1.0) / 2.0 * f_width;
+			y = (pos.y + 1.0) / 2.0  * f_height;
+			realPos = vec2(x, y);
 		}
+
 		
 		int x_index = int(floor(x));
 		int y_index = int(floor(y));
 		// The inverse of the distance. Lucklily every sqaure is exactly one unit.
 		vec2 xy_dist = realPos - floor(realPos);
 		// Interpolate the x-axis
-		vec2 r1 = vectorField[calcPosition(x_index, y_index)] * (1.0 - xy_dist.x) + vectorField[calcPosition(x_index + 1, y_index)] * xy_dist.x;
-		vec2 r2 = vectorField[calcPosition(x_index, y_index + 1)] * (1.0 - xy_dist.x) + vectorField[calcPosition(x_index + 1, y_index + 1)] * xy_dist.x;
+		vec2 r1 = vectorField[calcVectorPosition(x_index, y_index)] * (1.0 - xy_dist.x) + vectorField[calcVectorPosition(x_index + 1, y_index)] * xy_dist.x;
+		vec2 r2 = vectorField[calcVectorPosition(x_index, y_index + 1)] * (1.0 - xy_dist.x) + vectorField[calcVectorPosition(x_index + 1, y_index + 1)] * xy_dist.x;
 		// Interpolate the y-axis
 		vec2 velocity = r1 * (1.0 - xy_dist.y) + r2 * xy_dist.y;
 		particles[i].pos_loop += vec4(velocity, 0.0, 0.0);

@@ -12,6 +12,7 @@ void main()
 { 
     vec4 trail = texture(trailTexture, TexCoords);
     vec4 particle = texture(screenTexture, TexCoords);
+
     if (particle == u_clearColor) {
         color = mix(particle, trail, u_trail_mix);
     } else {

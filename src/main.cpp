@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     }
 
     if(cmdOptions.show_version){
-        std::cout << "Motion v0.2.0" << '\n';
+        std::cout << "Motion v0.1.0" << '\n';
         return EXIT_SUCCESS;
     }
 
@@ -148,9 +148,13 @@ int main(int argc, char **argv)
 
     std::random_device rd;
     std::mt19937 gen(rd()); // seed the generator
-    std::uniform_real_distribution<> initPlace(-1.0f, 1.0f); 
-    std::uniform_real_distribution<> loopDelay(0.0f, 30.0f * 5.0f); // define the range
-    float timeToLive = 30 * 10;
+    std::uniform_real_distribution<> initPlace(-1.0f, 1.0f);
+
+    // When looping we create a twice as long simulation but with
+    // the particles linearly increase/decrease to be overlayed on top of another.
+    // This creates the effect of perfect loop since there is no break.
+    std::uniform_real_distribution<> loopDelay(0.0f, cmdOptions.fps * cmdOptions.lengthInSeconds); // define the range
+    float timeToLive = cmdOptions.fps * cmdOptions.lengthInSeconds;
 
     for(int i = 0; i < cmdOptions.nbr_particles; i++){
 
@@ -196,7 +200,7 @@ int main(int argc, char **argv)
     glBindTexture(GL_TEXTURE_2D, particleTexture);
 
     // Give an empty image to OpenGL ( the last "0" )
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.width, cmdOptions.height, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, cmdOptions.width, cmdOptions.height, 0,GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
      // set the texture wrapping parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -205,6 +209,9 @@ int main(int argc, char **argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, particleTexture, 0);  
+
+    glReportFramebufferStatus();
+
     glBindTexture(GL_TEXTURE_2D, 0); // unbind
 
     // Background FBO:s
@@ -219,7 +226,7 @@ int main(int argc, char **argv)
     // Bind first FBO
     glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[0]);
     glBindTexture(GL_TEXTURE_2D, backgroundTextures[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.width, cmdOptions.height, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, cmdOptions.width, cmdOptions.height, 0,GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -227,10 +234,12 @@ int main(int argc, char **argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, backgroundTextures[0], 0);  
 
+    glReportFramebufferStatus();
+
     // Bind second FBO
     glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[1]);
     glBindTexture(GL_TEXTURE_2D, backgroundTextures[1]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, cmdOptions.width, cmdOptions.height, 0,GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, cmdOptions.width, cmdOptions.height, 0,GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -238,17 +247,9 @@ int main(int argc, char **argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, backgroundTextures[1], 0);  
 
+    glReportFramebufferStatus();
     glBindTexture(GL_TEXTURE_2D, 0); // unbind
 
-
-
-    // Set the list of draw buffers.
-    // GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-    // glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
-
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);//unbind
 
     // Post Processing
@@ -313,11 +314,17 @@ int main(int argc, char **argv)
     bool exit = false;
 
     particleComputeShader.use();
-    particleComputeShader.setBool("u_loop", true);
+    particleComputeShader.setBool("u_loop", cmdOptions.perfectLoop);
     particleComputeShader.setBool("u_angle_color", true);
-    particleComputeShader.setVec3f("u_cc", cmdOptions.cosSpeed);
-    particleComputeShader.setVec3f("u_dd", cmdOptions.cosOffset);
+    particleComputeShader.setVec3f("u_cc", cmdOptions.cosColorSpeed);
+    particleComputeShader.setVec3f("u_dd", cmdOptions.cosColorOffset);
     particleComputeShader.setFloat("u_probability_to_die", cmdOptions.probability_to_die);
+
+
+    int numberOfFramesToRecord = cmdOptions.fps * cmdOptions.lengthInSeconds;
+
+    if(cmdOptions.perfectLoop)
+        numberOfFramesToRecord = numberOfFramesToRecord * 2;
 
     // render loop
     // -----------
@@ -355,9 +362,10 @@ int main(int argc, char **argv)
         glClearColor( cmdOptions.background_color.x
                     , cmdOptions.background_color.y
                     , cmdOptions.background_color.z
-                    , 0.0
+                    , cmdOptions.background_color.w
                     );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
 
         particleShader.use();
         glBindVertexArray(PARTICLE_VAO);
@@ -402,12 +410,14 @@ int main(int argc, char **argv)
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
         glDisable(GL_DEPTH_TEST); // Make sure quad is rendered on top of all other
+
         glClearColor( cmdOptions.background_color.x
                     , cmdOptions.background_color.y
                     , cmdOptions.background_color.z
-                    , 0.0
+                    , cmdOptions.background_color.w
                     );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
 
         postprocessingShader.use();
         postprocessingShader.setInt("screenTexture", 0);
@@ -445,13 +455,10 @@ int main(int argc, char **argv)
             //     cv_pixels.at<cv::Vec3b>(y,x)[0] = pixels.at<cv::Vec3b>(cmdOptions.height-y-1,x)[2];
             // }
             // outputVideo.write(cv_pixels);
-
-
             
-            // 
-            // if(cmdOptions.nbr_frames_to_record == frameNbr){
-            //     exit = true;
-            // }
+            if(cmdOptions.fps == frameNbr){
+                exit = true;
+            }
         }
 
         frameNbr += 1;

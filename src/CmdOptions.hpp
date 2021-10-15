@@ -36,22 +36,25 @@ public:
     unsigned int nbr_compute_groups;
     glm::vec4 particle_color;
     glm::vec4 background_color;   
-    bool record;
     int nbr_frames_to_record;
     unsigned int vector_field_function;
     float probability_to_die;
     float trail_mix_rate = 0.9;
 
-    glm::vec3 cosSpeed;
-    glm::vec3 cosOffset;
+    glm::vec3 cosColorSpeed;
+    glm::vec3 cosColorOffset;
     
 
     // Record Info
     std::string record_folder = "../images/";
     std::string record_to_file = "../motion.mp4";
     std::string codec_name = "265/HVEC";
-    unsigned int framerate = 30;
     unsigned int bitrate = 800000;
+
+    unsigned int fps;
+    bool record;
+    bool perfectLoop = false;
+    unsigned int lengthInSeconds;
 
 
     options_description cmdline_options{"Motion Options"};
@@ -108,18 +111,9 @@ public:
 
         if (vm.count("particle-color"))
             particle_color = fromHexColor(vm["particle-color"].as<std::string>());
-        
 
         if (vm.count("background-color"))
             background_color = fromHexColor(vm["background-color"].as<std::string>());
-
-        if (vm.count("record"))
-            record = true;
-        else 
-            record = false;
-
-        if(vm.count("nbr-frames-to-record"))
-            nbr_frames_to_record = vm["nbr-frames-to-record"].as<int>();
 
         if(vm.count("vector-field-function"))
             vector_field_function = vm["vector-field-function"].as<unsigned int>();
@@ -130,27 +124,46 @@ public:
         if(vm.count("trail-mix-rate"))
             trail_mix_rate = vm["trail-mix-rate"].as<float>();         
         
+        // Record
 
-        if(vm.count("cos-speed")){
-            std::vector<float> cosSpeedTemp = vm["cos-speed"].as<std::vector<float>>();
+        if (vm.count("record"))
+            record = true;
+        else 
+            record = false;
+
+        if(vm.count("fps"))
+            fps = vm["fps"].as<unsigned int>();
+
+        if(vm.count("length"))
+            lengthInSeconds = vm["length"].as<unsigned int>();
+
+        if (vm.count("perfect-loop"))
+            perfectLoop = true;
+        else 
+            perfectLoop = false;
+    
+
+
+        if(vm.count("cos-color-speed")){
+            std::vector<float> cosSpeedTemp = vm["cos-color-speed"].as<std::vector<float>>();
             if(cosSpeedTemp.size() == 3){
-                cosSpeed = glm::vec3(cosSpeedTemp[0],cosSpeedTemp[1], cosSpeedTemp[2]);
+                cosColorSpeed = glm::vec3(cosSpeedTemp[0],cosSpeedTemp[1], cosSpeedTemp[2]);
             } else {
                 std::cout 
-                    << "WARNING: '--cos-speed ...' "
+                    << "WARNING: '--cos-color-speed ...' "
                     << " needs three floating point numbers" 
                     << std::endl;
                 failed = true;
             }
         }
 
-        if(vm.count("cos-offset")){
-            std::vector<float> cosOffsetTemp = vm["cos-offset"].as<std::vector<float>>();
+        if(vm.count("cos-color-offset")){
+            std::vector<float> cosOffsetTemp = vm["cos-color-offset"].as<std::vector<float>>();
             if(cosOffsetTemp.size() == 3){
-                cosOffset = glm::vec3(cosOffsetTemp[0],cosOffsetTemp[1], cosOffsetTemp[2]);
+                cosColorOffset = glm::vec3(cosOffsetTemp[0],cosOffsetTemp[1], cosOffsetTemp[2]);
             } else {
                 std::cout 
-                    << "WARNING: '--cos-offset ...' "
+                    << "WARNING: '--cos-color-offset ...' "
                     << " needs three floating point numbers" 
                     << std::endl;
                 failed = true;
@@ -197,12 +210,14 @@ private:
             ("vector-field-function", value<unsigned int>()->default_value(0), "Which function to use when creating the vector field")
             ("probability-to-die", value<float>()->default_value(0.01f), "The probability for a particle to die")
             ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background")
-            ("cos-speed", value<std::vector<float>>()->multitoken(), "The speed of change for the red, green, and blue components when using cos coloring")
-            ("cos-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring");
+            ("cos-color-speed", value<std::vector<float>>()->multitoken(), "The speed of change for the red, green, and blue components when using cos coloring")
+            ("cos-color-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring");
 
         recording.add_options()
             ("record", "If the program should record")
-            ("nbr-frames-to-record", value<int>()->default_value(-1), "The total number of frames to record");
+            ("fps", value<unsigned int>()->default_value(30), "The number of frames per second when recording")
+            ("length", value<unsigned int>()->default_value(10), "The length of the recording in seconds")
+            ("perfect-loop", "if the recording should create perfect loops");
         
         cmdline_options.add(generic).add(simulation).add(recording);
 
@@ -223,7 +238,7 @@ private:
         unsigned int r = std::stoul(hexColor.substr(start,2), nullptr, 16);
         unsigned int g = std::stoul(hexColor.substr(start + 2,2), nullptr, 16);
         unsigned int b = std::stoul(hexColor.substr(start + 4,2), nullptr, 16);
-        return glm::vec4((float) r / 255.0, (float) g / 255.0, (float) b / 255.0, 1.0);
+        return glm::vec4((float) r / 255.0, (float) g / 255.0, (float) b / 255.0, 0.0);
     }
 
 };
