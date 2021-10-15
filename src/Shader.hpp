@@ -57,6 +57,11 @@ public:
         glDeleteShader(compute);
     }
 
+    //This is nonseense just to allow me to create dummy shaders
+    Shader(){
+        ID = 19726387;
+    }
+
     // activate the shader
     // ------------------------------------------------------------------------
     void use() 
@@ -88,6 +93,10 @@ public:
     void setVec3f(const std::string &name, float value1, float value2, float value3) const
     { 
         glUniform3f(glGetUniformLocation(ID, name.c_str()), value1, value2, value3); 
+    }
+    void setVec3f(const std::string &name, glm::vec3 value) const
+    { 
+        glUniform3f(glGetUniformLocation(ID, name.c_str()), value.x, value.y, value.z); 
     }
     // ------------------------------------------------------------------------
     void setVec4f(const std::string &name, float value1, float value2, float value3, float value4) const

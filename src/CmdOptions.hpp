@@ -20,8 +20,14 @@ using namespace boost::program_options;
 class CmdOptions
 {
 public:
+    //Flag
+    bool failed = false;
+
+    // Generic
     bool show_help;
     bool show_version;
+
+    // Simulations
     unsigned int width;
     unsigned int height;
     unsigned int grid_resolution;
@@ -36,6 +42,11 @@ public:
     float probability_to_die;
     float trail_mix_rate = 0.9;
 
+    glm::vec3 cosSpeed;
+    glm::vec3 cosOffset;
+    
+
+    // Record Info
     std::string record_folder = "../images/";
     std::string record_to_file = "../motion.mp4";
     std::string codec_name = "265/HVEC";
@@ -44,40 +55,19 @@ public:
 
 
     options_description cmdline_options{"Motion Options"};
-    
+    options_description config_file_options;
+
+    CmdOptions(){
+        init();
+    }
+
     CmdOptions(int argc, char **argv){
+        init();
+        parse(argc, argv);
+    }
 
-        options_description generic{"Generic"};
-        options_description simulation{"Simulate"};
-        options_description recording{"Record"};
 
-        generic.add_options()
-            ("help", "Help screen")
-            ("version,v", "Print version string")
-            ("config", value<std::string>(), "File containing command line options");
-
-        simulation.add_options()
-            ("width,w", value<unsigned int>()->default_value(1200), "Width in pixels")
-            ("height,h", value<unsigned int>()->default_value(1200), "Height in pixels")
-            ("grid-resolution,r", value<unsigned int>()->default_value(100), "The number of pixels between each vector in the grid")
-            ("point-size", value<float>()->default_value(2.0f), "The pixel size of the particles")
-            ("nbr-particles", value<unsigned int>()->default_value(1024), "The number of particles in the simulation")
-            ("nbr-compute-groups", value<unsigned int>()->default_value(1024), "The number of compute groups issues to the graphics card")
-            ("particle-color", value<std::string>()->default_value("ffffff"), "Particle Color as 'ffffff'")
-            ("background-color", value<std::string>()->default_value("000000"), "Background Color as '000000'")
-            ("vector-field-function", value<unsigned int>()->default_value(0), "Which function to use when creating the vector field")
-            ("probability-to-die", value<float>()->default_value(0.01f), "The probability for a particle to die")
-            ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background");
-        
-        recording.add_options()
-            ("record", "If the program should record")
-            ("nbr-frames-to-record", value<int>()->default_value(-1), "The total number of frames to record");
-        
-        cmdline_options.add(generic).add(simulation).add(recording);
-
-        options_description config_file_options;
-        config_file_options.add(simulation).add(recording);
-
+    void parse(int argc, char **argv){
         variables_map vm;
         store(parse_command_line(argc, argv, cmdline_options), vm);
 
@@ -139,6 +129,33 @@ public:
 
         if(vm.count("trail-mix-rate"))
             trail_mix_rate = vm["trail-mix-rate"].as<float>();         
+        
+
+        if(vm.count("cos-speed")){
+            std::vector<float> cosSpeedTemp = vm["cos-speed"].as<std::vector<float>>();
+            if(cosSpeedTemp.size() == 3){
+                cosSpeed = glm::vec3(cosSpeedTemp[0],cosSpeedTemp[1], cosSpeedTemp[2]);
+            } else {
+                std::cout 
+                    << "WARNING: '--cos-speed ...' "
+                    << " needs three floating point numbers" 
+                    << std::endl;
+                failed = true;
+            }
+        }
+
+        if(vm.count("cos-offset")){
+            std::vector<float> cosOffsetTemp = vm["cos-offset"].as<std::vector<float>>();
+            if(cosOffsetTemp.size() == 3){
+                cosOffset = glm::vec3(cosOffsetTemp[0],cosOffsetTemp[1], cosOffsetTemp[2]);
+            } else {
+                std::cout 
+                    << "WARNING: '--cos-offset ...' "
+                    << " needs three floating point numbers" 
+                    << std::endl;
+                failed = true;
+            }
+        }
 
 
         // WARNINGS
@@ -152,30 +169,46 @@ public:
                 << nbr_compute_groups 
                 << "'" 
                 << std::endl;
-            }
-
-        if(width % grid_resolution != 0){
-            std::cout 
-                << "WARNING: '--width "
-                << width
-                << "' was specified to a number not divisible by '--grid-resolution" 
-                << grid_resolution 
-                << "'" 
-                << std::endl;
-            }
-
-        if(height % grid_resolution != 0){
-            std::cout 
-                << "WARNING: '--height "
-                << height
-                << "' was specified to a number not divisible by '--grid-resolution" 
-                << grid_resolution 
-                << "'" 
-                << std::endl;
+            failed = true;
             }
     }
 
 private:
+
+    void init(){
+        options_description generic{"Generic"};
+        options_description simulation{"Simulate"};
+        options_description recording{"Record"};
+
+        generic.add_options()
+            ("help", "Help screen")
+            ("version,v", "Print version string")
+            ("config", value<std::string>(), "File containing command line options");
+
+        simulation.add_options()
+            ("width,w", value<unsigned int>()->default_value(1200), "Width in pixels")
+            ("height,h", value<unsigned int>()->default_value(1200), "Height in pixels")
+            ("grid-resolution,r", value<unsigned int>()->default_value(100), "The number of pixels between each vector in the grid")
+            ("point-size", value<float>()->default_value(2.0f), "The pixel size of the particles")
+            ("nbr-particles", value<unsigned int>()->default_value(1024), "The number of particles in the simulation")
+            ("nbr-compute-groups", value<unsigned int>()->default_value(1024), "The number of compute groups issues to the graphics card")
+            ("particle-color", value<std::string>()->default_value("ffffff"), "Particle Color as 'ffffff'")
+            ("background-color", value<std::string>()->default_value("000000"), "Background Color as '000000'")
+            ("vector-field-function", value<unsigned int>()->default_value(0), "Which function to use when creating the vector field")
+            ("probability-to-die", value<float>()->default_value(0.01f), "The probability for a particle to die")
+            ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background")
+            ("cos-speed", value<std::vector<float>>()->multitoken(), "The speed of change for the red, green, and blue components when using cos coloring")
+            ("cos-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring");
+
+        recording.add_options()
+            ("record", "If the program should record")
+            ("nbr-frames-to-record", value<int>()->default_value(-1), "The total number of frames to record");
+        
+        cmdline_options.add(generic).add(simulation).add(recording);
+
+        
+        config_file_options.add(simulation).add(recording);
+    }
 
 
     glm::vec4 fromHexColor(std::string hexColor){

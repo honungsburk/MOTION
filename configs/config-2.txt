@@ -1,0 +1,16 @@
+vector-field-function = 0
+probability-to-die = 0.01 
+trail-mix-rate = 0.8 
+width = 1000 
+height = 1000 
+grid-resolution = 100
+point-size = 4.0 
+nbr-particles = 10240 
+particle-color = f3e0ec 
+background-color = 222222
+cos-speed = 0.2 
+cos-speed = 1.2 
+cos-speed = 2.3 
+cos-offset = 1.0
+cos-offset = 3.0
+cos-offset = 8.0
