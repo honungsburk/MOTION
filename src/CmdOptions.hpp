@@ -14,6 +14,8 @@ struct ColorSchema {
     glm::vec4 backgroundColor;
 };
 
+enum ColorMode { basic, angle };
+
 using namespace boost::program_options;
 
 // Contains all the options that has been set for the application.
@@ -43,6 +45,7 @@ public:
 
     glm::vec3 cosColorSpeed;
     glm::vec3 cosColorOffset;
+    ColorMode colorMode;
     
 
     // Record Info
@@ -142,7 +145,21 @@ public:
         else 
             perfectLoop = false;
     
-
+        if (vm.count("color-mode")){
+            std::string color_mode = vm["color-mode"].as<std::string>();
+            if(color_mode == "basic") {
+                colorMode = basic;
+            } else if (color_mode == "angle") {
+                colorMode = angle;
+            } else {
+                std::cout 
+                    << "WARNING: '--color-mode "
+                    << color_mode
+                    << "' only accepts 'basic' or 'angle'" 
+                    << std::endl;
+                failed = true;
+            }
+        }
 
         if(vm.count("cos-color-speed")){
             std::vector<float> cosSpeedTemp = vm["cos-color-speed"].as<std::vector<float>>();
@@ -212,6 +229,7 @@ private:
             ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background")
             ("cos-color-speed", value<std::vector<float>>()->multitoken(), "The speed of change for the red, green, and blue components when using cos coloring")
             ("cos-color-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring");
+            ("color-mode", value<std::string>()->default_value("basic"), "Choose which color mode: basic or angle");
 
         recording.add_options()
             ("record", "If the program should record")

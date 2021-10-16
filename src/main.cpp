@@ -315,11 +315,21 @@ int main(int argc, char **argv)
 
     particleComputeShader.use();
     particleComputeShader.setBool("u_loop", cmdOptions.perfectLoop);
-    particleComputeShader.setBool("u_angle_color", true);
+    particleComputeShader.setInt("u_fps", cmdOptions.fps);
+    particleComputeShader.setBool("u_cos_color", cmdOptions.colorMode == ColorMode::angle);
     particleComputeShader.setVec3f("u_cc", cmdOptions.cosColorSpeed);
     particleComputeShader.setVec3f("u_dd", cmdOptions.cosColorOffset);
     particleComputeShader.setFloat("u_probability_to_die", cmdOptions.probability_to_die);
 
+    postprocessingTrailShader.use();
+    postprocessingTrailShader.setBool("u_loop_record_mode", cmdOptions.record && cmdOptions.perfectLoop);
+    postprocessingTrailShader.setVec4f( "u_clearColor"
+                                      , cmdOptions.background_color.x
+                                      , cmdOptions.background_color.y
+                                      , cmdOptions.background_color.z
+                                      , cmdOptions.background_color.w
+                                      );
+    postprocessingTrailShader.setFloat("u_trail_mix", cmdOptions.trail_mix_rate);
 
     int numberOfFramesToRecord = cmdOptions.fps * cmdOptions.lengthInSeconds;
 
@@ -387,13 +397,6 @@ int main(int argc, char **argv)
 
         postprocessingTrailShader.setInt("screenTexture", 0);
         postprocessingTrailShader.setInt("trailTexture", 1);
-        postprocessingTrailShader.setVec4f( "u_clearColor"
-                                          , cmdOptions.background_color.x
-                                          , cmdOptions.background_color.y
-                                          , cmdOptions.background_color.z
-                                          , cmdOptions.background_color.w
-                                          );
-        postprocessingTrailShader.setFloat("u_trail_mix", cmdOptions.trail_mix_rate);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, particleTexture);
@@ -435,12 +438,29 @@ int main(int argc, char **argv)
         // Save Image
         //---------------------------------------------------------
         if(shouldRecord){
-            std::stringstream filename;
-            std::string fileNumber = std::to_string(frameNbr);
-            std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
-            filename << cmdOptions.record_folder.c_str() << new_string << ".png";
-            screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
-            std::cout << filename.str().c_str() << std::endl;
+            if(cmdOptions.perfectLoop){
+                std::stringstream filename;
+                unsigned int fileNumber = frameNbr;
+                std::string recordFolder = cmdOptions.record_folder + "increase/";
+                if(frameNbr >= numberOfFramesToRecord / 2){
+                    fileNumber = frameNbr - numberOfFramesToRecord / 2;
+                    recordFolder = cmdOptions.record_folder + "decrease/";
+                }
+
+                std::string s_filenumber = std::to_string(fileNumber);
+                std::string padded_filenumber = std::string(6- s_filenumber.length(), '0') + s_filenumber;
+
+                filename << recordFolder.c_str() << padded_filenumber << ".png";
+                screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
+                std::cout << filename.str().c_str() << std::endl;
+            } else {
+                std::stringstream filename;
+                std::string fileNumber = std::to_string(frameNbr);
+                std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
+                filename << cmdOptions.record_folder.c_str() << new_string << ".png";
+                screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
+                std::cout << filename.str().c_str() << std::endl;
+            }
 
             // glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data);
             //frameRecorder.addFrame();
@@ -456,7 +476,7 @@ int main(int argc, char **argv)
             // }
             // outputVideo.write(cv_pixels);
             
-            if(cmdOptions.fps == frameNbr){
+            if(numberOfFramesToRecord == frameNbr){
                 exit = true;
             }
         }
