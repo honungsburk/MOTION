@@ -14,10 +14,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
-
+#include "NvidiaHardwareEncoder.hpp"
 #include "CmdOptions.hpp"
 // #include "VideoCapture.hpp"
-#include <opencv2/videoio.hpp>
+// #include <opencv2/videoio.hpp>
 #include <random>
 
 #include <iostream>
@@ -50,6 +50,18 @@ CmdOptions cmdOptions;
 
 int main(int argc, char **argv)
 {
+    // Load NVIDIA API
+    // void *handle;
+    // double (*desk)(char*);
+    // char *error;
+
+    // handle = dlopen ("../include/Video_Codec_SDK_11.1.5/Lib/linux/stubs/x86_64/libnvidia-encode.so", RTLD_LAZY);
+    // if (!handle) {
+    //     fputs (dlerror(), stderr);
+    //     exit(1);
+    // }
+
+
 
     // Command line options
     // ------------------------------
@@ -279,23 +291,8 @@ int main(int argc, char **argv)
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, quad_stride, (void*)(2 * sizeof(float)));
 
-    // Shader Configuration
-    // --------------------
-    postprocessingShader.use();
-
-    postprocessingTrailShader.use();
 
 
-
-    //Used to pingpong between FBO:s
-    unsigned int pingPongFBOIndex = 0;
-
-    static GLubyte *pixels = NULL;
-    static png_byte *png_bytes = NULL;
-    static png_byte **png_rows = NULL;
-    unsigned int frameNbr = 0;
-
-    bool shouldRecord = cmdOptions.record;
     // VideoCapture frameRecorder( cmdOptions.record_to_file.c_str()
     //                           , cmdOptions.codec_name.c_str()
     //                           , cmdOptions.width
@@ -304,14 +301,17 @@ int main(int argc, char **argv)
     //                           , cmdOptions.bitrate
     //                           );
 
-    cv::VideoWriter outputVideo( "/home/frank/git/vector-field-particle-system/video.mp4"   // Video Name
-                                , cv::VideoWriter::fourcc('M', 'P', '4', 'V')               // fourcc 
-                                , 30.0f                                                     // Frame Rate 
-                                , cv::Size( cmdOptions.width, cmdOptions.height )           // Frame Size of the Video 
-                                , true                                                      // Is Color                
-                                );
-    
-    bool exit = false;
+    // cv::VideoWriter outputVideo( "/home/frank/git/vector-field-particle-system/video.mp4"   // Video Name
+    //                             , cv::VideoWriter::fourcc('M', 'P', '4', 'V')               // fourcc 
+    //                             , 30.0f                                                     // Frame Rate 
+    //                             , cv::Size( cmdOptions.width, cmdOptions.height )           // Frame Size of the Video 
+    //                             , true                                                      // Is Color                
+    //                             );
+
+
+    // Shader Configuration
+    // --------------------
+
 
     particleComputeShader.use();
     particleComputeShader.setBool("u_loop", cmdOptions.perfectLoop);
@@ -331,10 +331,32 @@ int main(int argc, char **argv)
                                       );
     postprocessingTrailShader.setFloat("u_trail_mix", cmdOptions.trail_mix_rate);
 
-    int numberOfFramesToRecord = cmdOptions.fps * cmdOptions.lengthInSeconds;
 
+    // Loop Variables
+    // -----------
+    bool shouldRecord = cmdOptions.record;
+    int numberOfFramesToRecord = cmdOptions.fps * cmdOptions.lengthInSeconds;    
+    bool exit = false;
+    //Used to pingpong between FBO:s
+    unsigned int pingPongFBOIndex = 0;
+
+    static GLubyte *pixels = NULL;
+    static png_byte *png_bytes = NULL;
+    static png_byte **png_rows = NULL;
+    unsigned int frameNbr = 0;
     if(cmdOptions.perfectLoop)
         numberOfFramesToRecord = numberOfFramesToRecord * 2;
+
+    NvidiaHardwareEncoder videoEncoder(
+        cmdOptions.width,
+        cmdOptions.height,
+        cmdOptions.fps,
+        NV_ENC_BUFFER_FORMAT_ARGB,
+        NV_ENC_PRESET_HQ_GUID,
+        NV_ENC_PRESET_P3_GUID,
+        NV_ENC_TUNING_INFO_HIGH_QUALITY,
+        "/home/frank/git/vector-field-particle-system/video.mp4"
+    ); 
 
     // render loop
     // -----------
@@ -397,6 +419,8 @@ int main(int argc, char **argv)
 
         postprocessingTrailShader.setInt("screenTexture", 0);
         postprocessingTrailShader.setInt("trailTexture", 1);
+        postprocessingTrailShader.setBool("u_first_frame", frameNbr == 0);
+        
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, particleTexture);
@@ -438,29 +462,36 @@ int main(int argc, char **argv)
         // Save Image
         //---------------------------------------------------------
         if(shouldRecord){
-            if(cmdOptions.perfectLoop){
-                std::stringstream filename;
-                unsigned int fileNumber = frameNbr;
-                std::string recordFolder = cmdOptions.record_folder + "increase/";
-                if(frameNbr >= numberOfFramesToRecord / 2){
-                    fileNumber = frameNbr - numberOfFramesToRecord / 2;
-                    recordFolder = cmdOptions.record_folder + "decrease/";
-                }
-
-                std::string s_filenumber = std::to_string(fileNumber);
-                std::string padded_filenumber = std::string(6- s_filenumber.length(), '0') + s_filenumber;
-
-                filename << recordFolder.c_str() << padded_filenumber << ".png";
-                screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
-                std::cout << filename.str().c_str() << std::endl;
+            if(numberOfFramesToRecord - 1 == frameNbr){
+                videoEncoder.encodeLastFrame(backgroundFBOs[outTexture]);
+                exit = true;
             } else {
-                std::stringstream filename;
-                std::string fileNumber = std::to_string(frameNbr);
-                std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
-                filename << cmdOptions.record_folder.c_str() << new_string << ".png";
-                screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
-                std::cout << filename.str().c_str() << std::endl;
+                videoEncoder.encodeFrame(backgroundFBOs[outTexture]);
             }
+
+            // if(cmdOptions.perfectLoop){
+            //     std::stringstream filename;
+            //     unsigned int fileNumber = frameNbr;
+            //     std::string recordFolder = cmdOptions.record_folder + "increase/";
+            //     if(frameNbr >= numberOfFramesToRecord / 2){
+            //         fileNumber = frameNbr - numberOfFramesToRecord / 2;
+            //         recordFolder = cmdOptions.record_folder + "decrease/";
+            //     }
+
+            //     std::string s_filenumber = std::to_string(fileNumber);
+            //     std::string padded_filenumber = std::string(6- s_filenumber.length(), '0') + s_filenumber;
+
+            //     filename << recordFolder.c_str() << padded_filenumber << ".png";
+            //     screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
+            //     std::cout << filename.str().c_str() << std::endl;
+            // } else {
+            //     std::stringstream filename;
+            //     std::string fileNumber = std::to_string(frameNbr);
+            //     std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
+            //     filename << cmdOptions.record_folder.c_str() << new_string << ".png";
+            //     screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
+            //     std::cout << filename.str().c_str() << std::endl;
+            // }
 
             // glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data);
             //frameRecorder.addFrame();
@@ -476,15 +507,13 @@ int main(int argc, char **argv)
             // }
             // outputVideo.write(cv_pixels);
             
-            if(numberOfFramesToRecord == frameNbr){
-                exit = true;
-            }
+
         }
 
         frameNbr += 1;
     }
 
-    outputVideo.release();
+    // outputVideo.release();
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
@@ -525,6 +554,10 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
                         float x_ = x / width * 0.01;
                         float y_ = y / height * 0.01;
                         return std::make_tuple(x_ + y_, y_ - x_);
+                        };
+            break;
+    case 5 : return [](float x, float y, float width, float height) { 
+                        return std::make_tuple(sin(x * M_PI / 4) * 0.01, cos(y * M_PI / 4) * 0.01);
                         };
             break;
     }

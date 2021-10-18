@@ -118,6 +118,10 @@ public:
         if (vm.count("background-color"))
             background_color = fromHexColor(vm["background-color"].as<std::string>());
 
+        if (vm.count("background-alpha")){
+            background_color.w = vm["background-alpha"].as<float>();
+        }
+
         if(vm.count("vector-field-function"))
             vector_field_function = vm["vector-field-function"].as<unsigned int>();
 
@@ -127,24 +131,6 @@ public:
         if(vm.count("trail-mix-rate"))
             trail_mix_rate = vm["trail-mix-rate"].as<float>();         
         
-        // Record
-
-        if (vm.count("record"))
-            record = true;
-        else 
-            record = false;
-
-        if(vm.count("fps"))
-            fps = vm["fps"].as<unsigned int>();
-
-        if(vm.count("length"))
-            lengthInSeconds = vm["length"].as<unsigned int>();
-
-        if (vm.count("perfect-loop"))
-            perfectLoop = true;
-        else 
-            perfectLoop = false;
-    
         if (vm.count("color-mode")){
             std::string color_mode = vm["color-mode"].as<std::string>();
             if(color_mode == "basic") {
@@ -188,6 +174,25 @@ public:
         }
 
 
+        // Record
+
+        if (vm.count("record"))
+            record = true;
+        else 
+            record = false;
+
+        if(vm.count("fps"))
+            fps = vm["fps"].as<unsigned int>();
+
+        if(vm.count("length"))
+            lengthInSeconds = vm["length"].as<unsigned int>();
+
+        if (vm.count("perfect-loop"))
+            perfectLoop = true;
+        else 
+            perfectLoop = false;
+
+
         // WARNINGS
         // ----------------------------------------------------------------------------------------
 
@@ -224,11 +229,12 @@ private:
             ("nbr-compute-groups", value<unsigned int>()->default_value(1024), "The number of compute groups issues to the graphics card")
             ("particle-color", value<std::string>()->default_value("ffffff"), "Particle Color as 'ffffff'")
             ("background-color", value<std::string>()->default_value("000000"), "Background Color as '000000'")
+            ("background-alpha", value<float>()->default_value(1.0), "Background alpha value between 0.0-1.0")
             ("vector-field-function", value<unsigned int>()->default_value(0), "Which function to use when creating the vector field")
             ("probability-to-die", value<float>()->default_value(0.01f), "The probability for a particle to die")
             ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background")
             ("cos-color-speed", value<std::vector<float>>()->multitoken(), "The speed of change for the red, green, and blue components when using cos coloring")
-            ("cos-color-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring");
+            ("cos-color-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring")
             ("color-mode", value<std::string>()->default_value("basic"), "Choose which color mode: basic or angle");
 
         recording.add_options()
@@ -256,7 +262,7 @@ private:
         unsigned int r = std::stoul(hexColor.substr(start,2), nullptr, 16);
         unsigned int g = std::stoul(hexColor.substr(start + 2,2), nullptr, 16);
         unsigned int b = std::stoul(hexColor.substr(start + 4,2), nullptr, 16);
-        return glm::vec4((float) r / 255.0, (float) g / 255.0, (float) b / 255.0, 0.0);
+        return glm::vec4((float) r / 255.0, (float) g / 255.0, (float) b / 255.0, 1.0);
     }
 
 };

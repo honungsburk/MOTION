@@ -62,6 +62,10 @@ public:
         ID = 19726387;
     }
 
+    void deleteProgram(){
+        glDeleteProgram(ID);
+    }
+
     // activate the shader
     // ------------------------------------------------------------------------
     void use() 

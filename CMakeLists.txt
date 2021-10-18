@@ -22,6 +22,8 @@ add_executable( VectorFieldParticleSystem
                 src/main.cpp 
                 src/glad.c 
                 src/stbImager.cpp 
+                src/NVEncoder/NvEncoder.cpp 
+                src/NVEncoder/NvEncoderGL.cpp 
                 include/glad/glad.h 
                 include/KHR/khrplatform.h )
                 
