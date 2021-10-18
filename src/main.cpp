@@ -15,11 +15,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include "CmdOptions.hpp"
-// #include "VideoCapture.hpp"
+#include "ImageSequencer.hpp"
 // #include <opencv2/videoio.hpp>
 #include <random>
-
-#include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -311,12 +309,14 @@ int main(int argc, char **argv)
     //Used to pingpong between FBO:s
     unsigned int pingPongFBOIndex = 0;
 
-    static GLubyte *pixels = NULL;
-    static png_byte *png_bytes = NULL;
-    static png_byte **png_rows = NULL;
+    // static GLubyte *pixels = NULL;
+    // static png_byte *png_bytes = NULL;
+    // static png_byte **png_rows = NULL;
     unsigned int frameNbr = 0;
     if(cmdOptions.perfectLoop)
         numberOfFramesToRecord = numberOfFramesToRecord * 2;
+
+    ImageSequencer imageSequencer(2, cmdOptions.width(), cmdOptions.height());
 
     // render loop
     // -----------
@@ -423,45 +423,34 @@ int main(int argc, char **argv)
         //---------------------------------------------------------
         if(shouldRecord){
 
+            std::stringstream filename;
             if(cmdOptions.perfectLoop){
-                std::stringstream filename;
                 unsigned int fileNumber = frameNbr;
                 std::string recordFolder = cmdOptions.record_folder + "increase/";
                 if(frameNbr >= numberOfFramesToRecord / 2){
                     fileNumber = frameNbr - numberOfFramesToRecord / 2;
                     recordFolder = cmdOptions.record_folder + "decrease/";
                 }
-
                 std::string s_filenumber = std::to_string(fileNumber);
                 std::string padded_filenumber = std::string(6- s_filenumber.length(), '0') + s_filenumber;
 
                 filename << recordFolder.c_str() << padded_filenumber << ".png";
-                screenshot_png(filename.str().c_str(), cmdOptions.width(), cmdOptions.height(), &pixels, &png_bytes, &png_rows);
+                imageSequencer.screenshot(filename.str().c_str());
                 std::cout << filename.str().c_str() << std::endl;
             } else {
                 std::stringstream filename;
                 std::string fileNumber = std::to_string(frameNbr);
                 std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
                 filename << cmdOptions.record_folder.c_str() << new_string << ".png";
-                screenshot_png(filename.str().c_str(), cmdOptions.width(), cmdOptions.height(), &pixels, &png_bytes, &png_rows);
+                imageSequencer.screenshot(filename.str().c_str());
                 std::cout << filename.str().c_str() << std::endl;
             }
 
-            // glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data);
-            //frameRecorder.addFrame();
 
-            // cv::Mat pixels( cmdOptions.height, cmdOptions.width, CV_8UC3 );
-            // glReadPixels(0, 0, cmdOptions.width, cmdOptions.height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data );
-            // cv::Mat cv_pixels( cmdOptions.height, cmdOptions.width, CV_8UC3 );
-            // for( int y=0; y<cmdOptions.height; y++ ) for( int x=0; x<cmdOptions.width; x++ ) 
-            // {
-            //     cv_pixels.at<cv::Vec3b>(y,x)[2] = pixels.at<cv::Vec3b>(cmdOptions.height-y-1,x)[0];
-            //     cv_pixels.at<cv::Vec3b>(y,x)[1] = pixels.at<cv::Vec3b>(cmdOptions.height-y-1,x)[1];
-            //     cv_pixels.at<cv::Vec3b>(y,x)[0] = pixels.at<cv::Vec3b>(cmdOptions.height-y-1,x)[2];
-            // }
-            // outputVideo.write(cv_pixels);
-            
 
+            if(numberOfFramesToRecord - 1 == frameNbr ){
+                exit = true;
+            }
         }
 
         frameNbr += 1;
