@@ -11,6 +11,13 @@ uniform float u_trail_mix;
 uniform bool u_loop_record_mode;
 uniform bool u_first_frame;
 
+vec4 safe_mix(vec4 target, vec4 current, float rate){
+    vec4 new_color = (1.0 - rate) * target + current * rate;
+    vec4 diff = new_color - current; // Shoul always be in the range -1 to 1
+    vec4 step = max(abs(diff), 1.0/255.0);
+    return current + sign(diff) * step;
+}
+
 void main()
 { 
     vec4 trail = texture(trailTexture, TexCoords);
@@ -24,7 +31,7 @@ void main()
         } else if(u_first_frame) {
             color = u_clearColor;
         } else {
-            color = mix(particle, trail, u_trail_mix);
+            color = safe_mix(u_clearColor, trail, u_trail_mix);
         }
     } else {
         color = particle;

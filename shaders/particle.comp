@@ -54,6 +54,8 @@ uniform float u_time;
 uniform bool u_cos_color;
 uniform vec3 u_cc;
 uniform vec3 u_dd;
+uniform vec2 u_angle_vector;
+uniform bool u_angle_own_position;
 
 uniform float u_probability_to_die;
 
@@ -154,7 +156,10 @@ void main()
 			// Ensures the output is between 0-1
 			vec3 aa = vec3(0.5);
 			vec3 bb = vec3(0.5);
-			float angle = acos(dot(normalize(velocity), normalize(pos + vec2(1.1, 0.0))));
+			float angle = acos(dot(normalize(velocity), normalize(u_angle_vector)));
+			if(u_angle_own_position){
+				float angle = acos(dot(normalize(velocity), normalize(pos + u_angle_vector)));
+			}
 
 			particles[i].color = vec4(cos_color(angle, aa, bb, u_cc, u_dd), 1.0);
 		}

@@ -14,7 +14,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include "NvidiaHardwareEncoder.hpp"
 #include "CmdOptions.hpp"
 // #include "VideoCapture.hpp"
 // #include <opencv2/videoio.hpp>
@@ -38,7 +37,7 @@ struct ParticleSystem {
 } pSystem;
 
 std::function<std::tuple<float, float>(float, float, float, float)> createVectorFieldFn(unsigned int functionNbr);
-VectorField createVectorField(int width, int height, int resolution, int padding, std::function<std::tuple<float, float>(float, float, float, float)> f);
+VectorField createVectorField(int vectorWidthGrid, int vectorHeightGrid, std::function<std::tuple<float, float>(float, float, float, float)> f);
 ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vectorField);
 void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField);
 
@@ -50,18 +49,6 @@ CmdOptions cmdOptions;
 
 int main(int argc, char **argv)
 {
-    // Load NVIDIA API
-    // void *handle;
-    // double (*desk)(char*);
-    // char *error;
-
-    // handle = dlopen ("../include/Video_Codec_SDK_11.1.5/Lib/linux/stubs/x86_64/libnvidia-encode.so", RTLD_LAZY);
-    // if (!handle) {
-    //     fputs (dlerror(), stderr);
-    //     exit(1);
-    // }
-
-
 
     // Command line options
     // ------------------------------
@@ -97,7 +84,7 @@ int main(int argc, char **argv)
 
     // glfw window creation
     // --------------------
-    GLFWwindow* window = glfwCreateWindow(cmdOptions.width, cmdOptions.height, "MOTION", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(cmdOptions.width(), cmdOptions.height(), "MOTION", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -142,7 +129,7 @@ int main(int argc, char **argv)
 
     std::function<std::tuple<float, float>(float, float, float, float)> vectorFieldFn = createVectorFieldFn(cmdOptions.vector_field_function); 
 
-    VectorField vectorField = createVectorField(cmdOptions.width, cmdOptions.height, cmdOptions.grid_resolution, 0, vectorFieldFn);
+    VectorField vectorField = createVectorField(cmdOptions.vectorGridWidth(), cmdOptions.vectorGridHeight(), vectorFieldFn);
 
     pSystem = initParticleSystem(particleComputeShader, vectorField);
 
@@ -212,7 +199,7 @@ int main(int argc, char **argv)
     glBindTexture(GL_TEXTURE_2D, particleTexture);
 
     // Give an empty image to OpenGL ( the last "0" )
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, cmdOptions.width, cmdOptions.height, 0,GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, cmdOptions.width(), cmdOptions.height(), 0,GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
      // set the texture wrapping parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -238,7 +225,7 @@ int main(int argc, char **argv)
     // Bind first FBO
     glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[0]);
     glBindTexture(GL_TEXTURE_2D, backgroundTextures[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, cmdOptions.width, cmdOptions.height, 0,GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, cmdOptions.width(), cmdOptions.height(), 0,GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -251,7 +238,7 @@ int main(int argc, char **argv)
     // Bind second FBO
     glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[1]);
     glBindTexture(GL_TEXTURE_2D, backgroundTextures[1]);
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, cmdOptions.width, cmdOptions.height, 0,GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, cmdOptions.width(), cmdOptions.height(), 0,GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -291,24 +278,6 @@ int main(int argc, char **argv)
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, quad_stride, (void*)(2 * sizeof(float)));
 
-
-
-    // VideoCapture frameRecorder( cmdOptions.record_to_file.c_str()
-    //                           , cmdOptions.codec_name.c_str()
-    //                           , cmdOptions.width
-    //                           , cmdOptions.height
-    //                           , cmdOptions.framerate
-    //                           , cmdOptions.bitrate
-    //                           );
-
-    // cv::VideoWriter outputVideo( "/home/frank/git/vector-field-particle-system/video.mp4"   // Video Name
-    //                             , cv::VideoWriter::fourcc('M', 'P', '4', 'V')               // fourcc 
-    //                             , 30.0f                                                     // Frame Rate 
-    //                             , cv::Size( cmdOptions.width, cmdOptions.height )           // Frame Size of the Video 
-    //                             , true                                                      // Is Color                
-    //                             );
-
-
     // Shader Configuration
     // --------------------
 
@@ -316,10 +285,12 @@ int main(int argc, char **argv)
     particleComputeShader.use();
     particleComputeShader.setBool("u_loop", cmdOptions.perfectLoop);
     particleComputeShader.setInt("u_fps", cmdOptions.fps);
-    particleComputeShader.setBool("u_cos_color", cmdOptions.colorMode == ColorMode::angle);
+    particleComputeShader.setBool("u_cos_color", cmdOptions.colorMode != ColorMode::basic);
+    particleComputeShader.setBool("u_angle_own_position", cmdOptions.colorMode == ColorMode::anglepos);
     particleComputeShader.setVec3f("u_cc", cmdOptions.cosColorSpeed);
     particleComputeShader.setVec3f("u_dd", cmdOptions.cosColorOffset);
     particleComputeShader.setFloat("u_probability_to_die", cmdOptions.probability_to_die);
+    particleComputeShader.setVec2f("u_angle_vector", cmdOptions.cosColorAnglePos);
 
     postprocessingTrailShader.use();
     postprocessingTrailShader.setBool("u_loop_record_mode", cmdOptions.record && cmdOptions.perfectLoop);
@@ -346,17 +317,6 @@ int main(int argc, char **argv)
     unsigned int frameNbr = 0;
     if(cmdOptions.perfectLoop)
         numberOfFramesToRecord = numberOfFramesToRecord * 2;
-
-    NvidiaHardwareEncoder videoEncoder(
-        cmdOptions.width,
-        cmdOptions.height,
-        cmdOptions.fps,
-        NV_ENC_BUFFER_FORMAT_ARGB,
-        NV_ENC_PRESET_HQ_GUID,
-        NV_ENC_PRESET_P3_GUID,
-        NV_ENC_TUNING_INFO_HIGH_QUALITY,
-        "/home/frank/git/vector-field-particle-system/video.mp4"
-    ); 
 
     // render loop
     // -----------
@@ -462,36 +422,30 @@ int main(int argc, char **argv)
         // Save Image
         //---------------------------------------------------------
         if(shouldRecord){
-            if(numberOfFramesToRecord - 1 == frameNbr){
-                videoEncoder.encodeLastFrame(backgroundFBOs[outTexture]);
-                exit = true;
+
+            if(cmdOptions.perfectLoop){
+                std::stringstream filename;
+                unsigned int fileNumber = frameNbr;
+                std::string recordFolder = cmdOptions.record_folder + "increase/";
+                if(frameNbr >= numberOfFramesToRecord / 2){
+                    fileNumber = frameNbr - numberOfFramesToRecord / 2;
+                    recordFolder = cmdOptions.record_folder + "decrease/";
+                }
+
+                std::string s_filenumber = std::to_string(fileNumber);
+                std::string padded_filenumber = std::string(6- s_filenumber.length(), '0') + s_filenumber;
+
+                filename << recordFolder.c_str() << padded_filenumber << ".png";
+                screenshot_png(filename.str().c_str(), cmdOptions.width(), cmdOptions.height(), &pixels, &png_bytes, &png_rows);
+                std::cout << filename.str().c_str() << std::endl;
             } else {
-                videoEncoder.encodeFrame(backgroundFBOs[outTexture]);
+                std::stringstream filename;
+                std::string fileNumber = std::to_string(frameNbr);
+                std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
+                filename << cmdOptions.record_folder.c_str() << new_string << ".png";
+                screenshot_png(filename.str().c_str(), cmdOptions.width(), cmdOptions.height(), &pixels, &png_bytes, &png_rows);
+                std::cout << filename.str().c_str() << std::endl;
             }
-
-            // if(cmdOptions.perfectLoop){
-            //     std::stringstream filename;
-            //     unsigned int fileNumber = frameNbr;
-            //     std::string recordFolder = cmdOptions.record_folder + "increase/";
-            //     if(frameNbr >= numberOfFramesToRecord / 2){
-            //         fileNumber = frameNbr - numberOfFramesToRecord / 2;
-            //         recordFolder = cmdOptions.record_folder + "decrease/";
-            //     }
-
-            //     std::string s_filenumber = std::to_string(fileNumber);
-            //     std::string padded_filenumber = std::string(6- s_filenumber.length(), '0') + s_filenumber;
-
-            //     filename << recordFolder.c_str() << padded_filenumber << ".png";
-            //     screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
-            //     std::cout << filename.str().c_str() << std::endl;
-            // } else {
-            //     std::stringstream filename;
-            //     std::string fileNumber = std::to_string(frameNbr);
-            //     std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
-            //     filename << cmdOptions.record_folder.c_str() << new_string << ".png";
-            //     screenshot_png(filename.str().c_str(), cmdOptions.width, cmdOptions.height, &pixels, &png_bytes, &png_rows);
-            //     std::cout << filename.str().c_str() << std::endl;
-            // }
 
             // glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data);
             //frameRecorder.addFrame();
@@ -540,7 +494,7 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
              break;
     case 2 : return [](float x, float y, float width, float height) { 
                         float center_x = width / 2;
-                        float center_y = width / 2;
+                        float center_y = height / 2;
                         float max_length = sqrt(width*width + height*height) / 2.0;
                         return std::make_tuple(0.01 * (x - center_x) / max_length   , 0.01 * (y - center_y) / max_length ); 
                         };
@@ -560,6 +514,66 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
                         return std::make_tuple(sin(x * M_PI / 4) * 0.01, cos(y * M_PI / 4) * 0.01);
                         };
             break;
+    case 6 : return [](float x, float y, float width, float height) { 
+                        return std::make_tuple(atan(x - width) * 0.01, atan(y - height) * 0.01);
+                        };
+            break;
+    case 7 : return [](float x, float y, float width, float height) { 
+                        int even_x = -1 + 2 * (int(x) % 2);
+                        int even_y = -1 + 2 * (int(y) % 2);
+                        return std::make_tuple( even_x * 0.01,  even_y * 0.01);
+                        };
+            break;
+    case 8 : return [](float x, float y, float width, float height) { 
+                        int even_x = -1 + 2 * (int(x) % 2);
+                        int even_y = -1 + 2 * (int(y) % 2);
+                        return std::make_tuple( even_x * 0.01,  even_y * 0.01);
+                        };
+            break;
+    case 9 : return [](float x, float y, float width, float height) { 
+                    return std::make_tuple(sin(5.0*y + x) * 0.01, cos(5.0*x - y) * 0.01);
+                    };
+        break;
+    case 10 : return [](float x, float y, float width, float height) { 
+                    float w = 2.0*M_PI/5.;
+                    float A = 2.0;
+                    int mid_x = x - width / 2;
+                    int mid_y = y - height / 2;
+
+                    float d = sqrt(mid_x*mid_x + mid_y*mid_y) + 0.01;
+                    return std::make_tuple(A*cos(w*100/d) * 0.001, A*sin(w*100/d) * 0.001);
+                    };
+        break;
+    case 11 : return [](float x, float y, float width, float height) { 
+                    float a = 0.1;
+                    int mid_x = x - width / 2;
+                    int mid_y = y - height / 2;
+                    float r2 = mid_x * mid_x + mid_y * mid_y;
+                    //v = vec2(p.y, -x) / r2 - a * p;
+                    return std::make_tuple(0.01 * y / r2, -0.01 * x / r2);
+                    };
+        break;
+    case 12 : return [](float x, float y, float width, float height) { 
+                    float a = 0.01;
+                    int mid_x = x - width / 2;
+                    int mid_y = y - height / 2;
+                    float r2 = mid_x * mid_x + mid_y * mid_y + 0.01;
+                    //v = vec2(p.y, -x) / r2 - a * p;
+                    return std::make_tuple(a * mid_y / r2 - a * mid_x, -1.0 * a * mid_x / r2 - a * mid_y);
+                    };
+        break;
+    case 13 : return [](float x, float y, float width, float height) { 
+                    float a = 0.001;
+                    int mid_x = x - width / 2;
+                    int mid_y = y - height / 2;
+                    float r2 = mid_x * mid_x + mid_y * mid_y + 0.001;
+                    //v = vec2(p.y, -x) / r2 - a * p;
+                    return std::make_tuple(a * mid_y / r2 - a * mid_x, -1.0 * a * mid_x / r2 - a * mid_y);
+                    };
+        break;
+
+
+
     }
 
     return defaultFN;
@@ -573,22 +587,19 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
 //
 // The padding is helpfull if you want the vector field to extend beyond the screen.
 // ------------------------------------------------------------------------------------
-VectorField createVectorField(int width, int height, int resolution, int padding, std::function<std::tuple<float, float>(float, float, float, float)> f)
+VectorField createVectorField(int vectorWidthGrid, int vectorHeightGrid, std::function<std::tuple<float, float>(float, float, float, float)> f)
 {
 
-    int vectorFieldWidth = round(float(width) / float(resolution)) + padding * 2;
-    int vectorFieldHeight = round(float(height) / float(resolution)) + padding * 2;
-
     std::vector<float> vectorFieldData;
-    for (int i = 0; i < vectorFieldWidth; i++) {
-            for (int j = 0; j < vectorFieldHeight; j++) {
-                auto res = f(i, j, vectorFieldWidth, vectorFieldHeight);
+    for (int i = 0; i < vectorWidthGrid; i++) {
+            for (int j = 0; j < vectorHeightGrid; j++) {
+                auto res = f(i, j, vectorWidthGrid, vectorHeightGrid);
                 vectorFieldData.push_back(std::get<0>(res));
                 vectorFieldData.push_back(std::get<1>(res));
             }
     }
 
-    return VectorField { vectorFieldData, vectorFieldWidth, vectorFieldHeight };
+    return VectorField { vectorFieldData, vectorWidthGrid, vectorHeightGrid };
 }
 
 ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vectorField){
@@ -660,16 +671,16 @@ void processInput(GLFWwindow *window)
 // ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    cmdOptions.width = width;
-    cmdOptions.height = height;
+    // cmdOptions.width = width;
+    // cmdOptions.height = height;
 
     std::function<std::tuple<float, float>(float, float, float, float)> vectorFieldFn = createVectorFieldFn(cmdOptions.vector_field_function); 
 
-    VectorField vectorField = createVectorField(cmdOptions.width, cmdOptions.height, cmdOptions.grid_resolution, 0, vectorFieldFn);
+    VectorField vectorField = createVectorField(cmdOptions.vectorGridWidth(), cmdOptions.vectorGridHeight(), vectorFieldFn);
 
     updateParticleSystem(pSystem, vectorField);
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
-    glViewport(0, 0, cmdOptions.width, cmdOptions.height);
+    glViewport(0, 0, cmdOptions.width(), cmdOptions.height());
 }
 

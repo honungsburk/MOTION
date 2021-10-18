@@ -14,7 +14,7 @@ struct ColorSchema {
     glm::vec4 backgroundColor;
 };
 
-enum ColorMode { basic, angle };
+enum ColorMode { basic, anglebasic, anglepos };
 
 using namespace boost::program_options;
 
@@ -30,23 +30,30 @@ public:
     bool show_version;
 
     // Simulations
-    unsigned int width;
-    unsigned int height;
-    unsigned int grid_resolution;
-    float point_size;
-    unsigned int nbr_particles;
+
+    // Resolution independent
+    unsigned int width_ratio;
+    unsigned int height_ratio;
+    unsigned int pixels_per_ratio;
+    unsigned int vectors_per_ratio;
+
     unsigned int nbr_compute_groups;
-    glm::vec4 particle_color;
-    glm::vec4 background_color;   
-    int nbr_frames_to_record;
     unsigned int vector_field_function;
     float probability_to_die;
     float trail_mix_rate = 0.9;
 
+    // Resolution dependent
+    float point_size;
+    unsigned int nbr_particles;
+
+    // Coloring
+    ColorMode colorMode;
     glm::vec3 cosColorSpeed;
     glm::vec3 cosColorOffset;
-    ColorMode colorMode;
-    
+    glm::vec2 cosColorAnglePos;
+    glm::vec4 particle_color;
+    glm::vec4 background_color;   
+
 
     // Record Info
     std::string record_folder = "../images/";
@@ -93,15 +100,21 @@ public:
             show_version = true;
         else 
             show_version = false;
+
         
-        if (vm.count("width"))
-            width = vm["width"].as<unsigned int>();
+        if (vm.count("width-ratio"))
+            width_ratio = vm["width-ratio"].as<unsigned int>();
         
-        if (vm.count("height"))
-            height = vm["height"].as<unsigned int>();
+        if (vm.count("height-ratio"))
+            height_ratio = vm["height-ratio"].as<unsigned int>();
         
-        if (vm.count("grid-resolution"))
-            grid_resolution = vm["grid-resolution"].as<unsigned int>();
+        if (vm.count("pixels-per-ratio"))
+            pixels_per_ratio = vm["pixels-per-ratio"].as<unsigned int>();
+
+        if (vm.count("vectors-per-ratio"))
+            vectors_per_ratio = vm["vectors-per-ratio"].as<unsigned int>();
+
+
         
         if (vm.count("point-size"))
             point_size = vm["point-size"].as<float>();
@@ -135,13 +148,28 @@ public:
             std::string color_mode = vm["color-mode"].as<std::string>();
             if(color_mode == "basic") {
                 colorMode = basic;
-            } else if (color_mode == "angle") {
-                colorMode = angle;
+            } else if (color_mode == "angle-basic") {
+                colorMode = anglebasic;
+            } else if (color_mode == "angle-pos") {
+                colorMode = anglepos;
             } else {
                 std::cout 
                     << "WARNING: '--color-mode "
                     << color_mode
                     << "' only accepts 'basic' or 'angle'" 
+                    << std::endl;
+                failed = true;
+            }
+        }
+
+        if(vm.count("cos-angle-offset")){
+            std::vector<float> cosAngleOffset = vm["cos-angle-offset"].as<std::vector<float>>();
+            if(cosAngleOffset.size() == 2){
+                cosColorAnglePos = glm::vec2(cosAngleOffset[0], cosAngleOffset[1]);
+            } else {
+                std::cout 
+                    << "WARNING: '--cos-angle-offset ...' "
+                    << " needs two floating point numbers" 
                     << std::endl;
                 failed = true;
             }
@@ -208,6 +236,22 @@ public:
             }
     }
 
+    unsigned int width(){
+        return width_ratio * pixels_per_ratio;
+    }
+
+    unsigned int height(){
+        return height_ratio * pixels_per_ratio;
+    }
+
+    unsigned int vectorGridWidth() {
+        return width_ratio * vectors_per_ratio;
+    }
+
+    unsigned int vectorGridHeight() {
+        return height_ratio * vectors_per_ratio;
+    }
+
 private:
 
     void init(){
@@ -221,9 +265,10 @@ private:
             ("config", value<std::string>(), "File containing command line options");
 
         simulation.add_options()
-            ("width,w", value<unsigned int>()->default_value(1200), "Width in pixels")
-            ("height,h", value<unsigned int>()->default_value(1200), "Height in pixels")
-            ("grid-resolution,r", value<unsigned int>()->default_value(100), "The number of pixels between each vector in the grid")
+            ("width-ratio, w", value<unsigned int>()->default_value(16), "Width-Ratio like 16 in 16:9")
+            ("height-ratio, h", value<unsigned int>()->default_value(9), "Width-Ratio like 9 in 16:9")
+            ("pixels-per-ratio", value<unsigned int>()->default_value(80), "The number of pixels per ratio")
+            ("vectors-per-ratio", value<unsigned int>()->default_value(1200), "The number of vectors per ratio")
             ("point-size", value<float>()->default_value(2.0f), "The pixel size of the particles")
             ("nbr-particles", value<unsigned int>()->default_value(1024), "The number of particles in the simulation")
             ("nbr-compute-groups", value<unsigned int>()->default_value(1024), "The number of compute groups issues to the graphics card")
@@ -235,6 +280,7 @@ private:
             ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background")
             ("cos-color-speed", value<std::vector<float>>()->multitoken(), "The speed of change for the red, green, and blue components when using cos coloring")
             ("cos-color-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring")
+            ("cos-angle-offset", value<std::vector<float>>()->multitoken(), "The angle/position the angle is computed against")
             ("color-mode", value<std::string>()->default_value("basic"), "Choose which color mode: basic or angle");
 
         recording.add_options()
