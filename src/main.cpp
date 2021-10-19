@@ -16,7 +16,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include "CmdOptions.hpp"
 #include "ImageSequencer.hpp"
-// #include "VideoCapture.hpp"
+#include "VideoCapture.hpp"
 
 #include <random>
 
@@ -321,12 +321,12 @@ int main(int argc, char **argv)
 
     ImageSequencer imageSequencer(2, cmdOptions.width(), cmdOptions.height());
 
-    // VideoCapture( "../test.mp4"
-    //             , cmdOptions.width()
-    //             , cmdOptions.height()
-    //             , cmdOptions.fps
-    //             , 800000
-    //             );
+    VideoCapture videoCapture( "../test.mp4"
+                            , cmdOptions.width()
+                            , cmdOptions.height()
+                            , cmdOptions.fps
+                            , 800000
+                            );
 
     // render loop
     // -----------
@@ -433,29 +433,30 @@ int main(int argc, char **argv)
         //---------------------------------------------------------
         if(shouldRecord){
 
-            std::stringstream filename;
-            if(cmdOptions.perfectLoop){
-                unsigned int fileNumber = frameNbr;
-                std::string recordFolder = cmdOptions.record_folder + "increase/";
-                if(frameNbr >= numberOfFramesToRecord / 2){
-                    fileNumber = frameNbr - numberOfFramesToRecord / 2;
-                    recordFolder = cmdOptions.record_folder + "decrease/";
-                }
-                std::string s_filenumber = std::to_string(fileNumber);
-                std::string padded_filenumber = std::string(6- s_filenumber.length(), '0') + s_filenumber;
+            // std::stringstream filename;
+            // if(cmdOptions.perfectLoop){
+            //     unsigned int fileNumber = frameNbr;
+            //     std::string recordFolder = cmdOptions.record_folder + "increase/";
+            //     if(frameNbr >= numberOfFramesToRecord / 2){
+            //         fileNumber = frameNbr - numberOfFramesToRecord / 2;
+            //         recordFolder = cmdOptions.record_folder + "decrease/";
+            //     }
+            //     std::string s_filenumber = std::to_string(fileNumber);
+            //     std::string padded_filenumber = std::string(6- s_filenumber.length(), '0') + s_filenumber;
 
-                filename << recordFolder.c_str() << padded_filenumber << ".png";
-                imageSequencer.screenshot(filename.str().c_str());
-                std::cout << filename.str().c_str() << std::endl;
-            } else {
-                std::stringstream filename;
-                std::string fileNumber = std::to_string(frameNbr);
-                std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
-                filename << cmdOptions.record_folder.c_str() << new_string << ".png";
-                imageSequencer.screenshot(filename.str().c_str());
-                std::cout << filename.str().c_str() << std::endl;
-            }
+            //     filename << recordFolder.c_str() << padded_filenumber << ".png";
+            //     imageSequencer.screenshot(filename.str().c_str());
+            //     std::cout << filename.str().c_str() << std::endl;
+            // } else {
+            //     std::stringstream filename;
+            //     std::string fileNumber = std::to_string(frameNbr);
+            //     std::string new_string = std::string(6- fileNumber.length(), '0') + fileNumber;
+            //     filename << cmdOptions.record_folder.c_str() << new_string << ".png";
+            //     imageSequencer.screenshot(filename.str().c_str());
+            //     std::cout << filename.str().c_str() << std::endl;
+            // }
 
+            videoCapture.addFrame();
 
 
             if(numberOfFramesToRecord - 1 == frameNbr ){
@@ -465,6 +466,8 @@ int main(int argc, char **argv)
 
         frameNbr += 1;
     }
+
+    videoCapture.close();
 
     // outputVideo.release();
 

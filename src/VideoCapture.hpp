@@ -1,12 +1,6 @@
 
 #ifndef VIDEO_CAPTURE_H
 #define VIDEO_CAPTURE_H
-/**
- * @file
- * video encoding with libavcodec API example
- *
- * @example encode_video.c
- */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,8 +28,8 @@ public:
             exit(1);
         }
 
-        c = avcodec_alloc_context3(codec);
-        if (!c) {
+        codex_ctx = avcodec_alloc_context3(codec);
+        if (!codex_ctx) {
             fprintf(stderr, "Could not allocate video codec context\n");
             exit(1);
         }
@@ -45,13 +39,13 @@ public:
             exit(1);
 
         /* put sample parameters */
-        c->bit_rate = bitrate;
+        codex_ctx->bit_rate = bitrate;
         /* resolution must be a multiple of two */
-        c->width = width;
-        c->height = height;
+        codex_ctx->width = width;
+        codex_ctx->height = height;
         /* frames per second */
-        c->time_base = (AVRational){1, framerate};
-        c->framerate = (AVRational){framerate, 1};
+        codex_ctx->time_base = (AVRational){1, framerate};
+        codex_ctx->framerate = (AVRational){framerate, 1};
 
         /* emit one intra frame every ten frames
         * check frame pict_type before passing frame
@@ -59,15 +53,15 @@ public:
         * then gop_size is ignored and the output of encoder
         * will always be I frame irrespective to gop_size
         */
-        c->gop_size = 10;
-        c->max_b_frames = 1;
-        c->pix_fmt = AV_PIX_FMT_YUV420P; // AV_PIX_FMT_RGB8
+        codex_ctx->gop_size = 10;
+        codex_ctx->max_b_frames = 1;
+        codex_ctx->pix_fmt = AV_PIX_FMT_YUV420P; // AV_PIX_FMT_RGB8
 
         if (codec->id == AV_CODEC_ID_H264)
-            av_opt_set(c->priv_data, "preset", "slow", 0);
+            av_opt_set(codex_ctx->priv_data, "preset", "slow", 0);
 
         /* open it */
-        ret = avcodec_open2(c, codec, NULL);
+        ret = avcodec_open2(codex_ctx, codec, NULL);
         if (ret < 0) {
             fprintf(stderr, "Could not open codec: %d\n", ret);
             exit(1);
@@ -84,9 +78,9 @@ public:
             fprintf(stderr, "Could not allocate video frame\n");
             exit(1);
         }
-        frame->format = c->pix_fmt;
-        frame->width  = c->width;
-        frame->height = c->height;
+        frame->format = codex_ctx->pix_fmt;
+        frame->width  = codex_ctx->width;
+        frame->height = codex_ctx->height;
 
         ret = av_frame_get_buffer(frame, 0);
         if (ret < 0) {
@@ -94,8 +88,16 @@ public:
             exit(1);
         }
 
-        frame_order = 1;
-        sws = sws_getContext(c->width, c->height, AV_PIX_FMT_RGB32, c->width, c->height, AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, 0, 0, 0);
+        frame_order = 1; 
+        sws = sws_getContext( codex_ctx->width
+                            , codex_ctx->height
+                            , AV_PIX_FMT_RGB32
+                            , codex_ctx->width
+                            , codex_ctx->height
+                            , AV_PIX_FMT_YUV420P
+                            , SWS_FAST_BILINEAR
+                            , 0, 0, 0);
+        //sws = sws_getContext(codex_ctx->width, codex_ctx->height, (AVPixelFormat) sws->format, codex_ctx->width, codex_ctx->height, AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, 0, 0, 0);
     }
 
     void addFrame(){
@@ -115,30 +117,34 @@ public:
         if (ret < 0)
             exit(1); // Wait... you should throw error instead!
 
-        size_t nvals = 4 * c->width * c->height; //GL_BGRA
+        size_t nvals = 4 * codex_ctx->width * codex_ctx->height; //GL_BGRA
         pixels = (GLubyte *) realloc(pixels, nvals * sizeof(GLubyte));
-        glReadPixels(0, 0, c->width, c->height, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        glReadPixels(0, 0, codex_ctx->width, codex_ctx->height, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
 
         // CONVERT TO YUV AND ENCODE
-        // int frame_size = avpicture_get_size(AV_PIX_FMT_YUV420P, c->width, c->height);
-        // c->frame_buffer = malloc(frame_size);
+        int frame_size = avpicture_get_size(AV_PIX_FMT_YUV420P, codex_ctx->width, codex_ctx->height);
+        frame_buffer = (uint8_t *) realloc(frame_buffer, frame_size);
 
-        //avpicture_fill((AVPicture *) frame, (uint8_t *) c->frame_buffer, AV_PIX_FMT_YUV420P, c->width, c->height);
-        
-        uint8_t *in_data[1] = {(uint8_t *) pixels};
-        int in_linesize[1] = { 4*c->width }; // RGBA stride
-        sws_scale(sws, in_data, in_linesize, 0, c->height, frame->data, frame->linesize);
+        avpicture_fill((AVPicture *) frame, (uint8_t *) frame_buffer, AV_PIX_FMT_YUV420P, codex_ctx->width, codex_ctx->height);
+
+        // Compensate for OpenGL y-axis pointing upwards and ffmpeg y-axis pointing downwards        
+        uint8_t *in_data[1] = {(uint8_t *) pixels + (codex_ctx->height-1)*codex_ctx->width*4}; // address of the last line
+        int in_linesize[1] = {- codex_ctx->width * 4}; // negative stride
+
+        // uint8_t *in_data[1] = {(uint8_t *) pixels};
+        // int in_linesize[1] = { 4*codex_ctx->width }; // RGBA stride
+        sws_scale(sws, in_data, in_linesize, 0, codex_ctx->height, frame->data, frame->linesize);
 
         frame->pts = frame_order;
         frame_order++;
 
         /* encode the image */
-        encode(c, frame, pkt, f);
+        encode(codex_ctx, frame, pkt, f);
     }
 
     void close(){
         /* flush the encoder */
-        encode(c, NULL, pkt, f);
+        encode(codex_ctx, NULL, pkt, f);
 
         /* Add sequence end code to have a real MPEG file.
         It makes only sense because this tiny examples writes packets
@@ -150,9 +156,10 @@ public:
             fwrite(endcode, 1, sizeof(endcode), f);
         fclose(f);
 
-        avcodec_free_context(&c);
+        avcodec_free_context(&codex_ctx);
         av_frame_free(&frame);
         av_packet_free(&pkt);
+        sws_freeContext(sws);
     }
 
 
@@ -161,10 +168,11 @@ private:
     struct SwsContext *sws;
 
     const AVCodec *codec;
-    AVCodecContext *c= NULL;
+    AVCodecContext *codex_ctx= NULL;
     int frame_order, ret;
     FILE *f;
     AVFrame *frame;
+    uint8_t *frame_buffer;
     AVPacket *pkt;
     uint8_t endcode[4] = { 0, 0, 1, 0xb7 };
 

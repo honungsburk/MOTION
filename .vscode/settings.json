@@ -55,6 +55,20 @@
         "ratio": "cpp",
         "iomanip": "cpp",
         "mutex": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "*.ipp": "cpp",
+        "*.inc": "cpp",
+        "strstream": "cpp",
+        "bitset": "cpp",
+        "cassert": "cpp",
+        "cerrno": "cpp",
+        "cfloat": "cpp",
+        "ciso646": "cpp",
+        "climits": "cpp",
+        "csignal": "cpp",
+        "queue": "cpp",
+        "set": "cpp",
+        "valarray": "cpp",
+        "version": "cpp"
     }
 }

@@ -6,9 +6,9 @@ if(CMAKE_VERSION VERSION_LESS 3.0.0)
     check_cxx_compiler_flag(-std=c++11 COMPILER_SUPPORTS_CXX11)
     check_cxx_compiler_flag(-std=c++0x COMPILER_SUPPORTS_CXX0X)
     if(COMPILER_SUPPORTS_CXX11)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -ffast-math")
     elseif(COMPILER_SUPPORTS_CXX0X)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -ffast-math")
     endif()
 else()
     SET(CMAKE_CXX_STANDARD 11)
@@ -21,7 +21,7 @@ conan_basic_setup()
 add_executable( VectorFieldParticleSystem 
                 src/main.cpp 
                 src/glad.c 
-                src/stbImager.cpp 
+                src/stbImager.cpp
                 include/glad/glad.h 
                 include/KHR/khrplatform.h )
                 

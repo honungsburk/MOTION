@@ -6,7 +6,7 @@
 Most dependencies are installed by conan but some need to exist on your system:
 
 libva-dev
-
+libswscale-dev
 
 ## Compiling steps
 
@@ -41,3 +41,4 @@ ffmpeg -framerate 30 \
 # Nvidea Hardware encoder
 https://docs.nvidia.com/video-technologies/video-codec-sdk/nvenc-video-encoder-api-prog-guide/
 https://stackoverflow.com/questions/13857400/encoding-fbo-textures-to-h-264-video-directly-on-gpu
+https://stackoverflow.com/questions/49862610/opengl-to-ffmpeg-encode
