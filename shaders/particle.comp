@@ -65,6 +65,9 @@ uniform float u_probability_to_die;
 uniform bool u_loop;
 uniform int u_loop_iteration;
 uniform int u_fps;
+uniform float u_speed;
+
+uniform int u_interpolation_mode;
 
 struct Particle{
 	// x and y are positions
@@ -106,7 +109,7 @@ layout(local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
 
 void main()
 {
-	float speed_factor = 30.0 / u_fps;
+	float speed_factor = u_speed * 30.0 / u_fps;
 
 	uint i = gl_GlobalInvocationID.x;
 
@@ -145,12 +148,30 @@ void main()
 		int y_index = int(floor(y));
 		// The inverse of the distance. Lucklily every sqaure is exactly one unit.
 		vec2 xy_dist = realPos - floor(realPos);
-		// Interpolate the x-axis
-		vec2 r1 = vectorField[calcVectorPosition(x_index, y_index)] * (1.0 - xy_dist.x) + vectorField[calcVectorPosition(x_index + 1, y_index)] * xy_dist.x;
-		vec2 r2 = vectorField[calcVectorPosition(x_index, y_index + 1)] * (1.0 - xy_dist.x) + vectorField[calcVectorPosition(x_index + 1, y_index + 1)] * xy_dist.x;
-		// Interpolate the y-axis
-		vec2 velocity = r1 * (1.0 - xy_dist.y) + r2 * xy_dist.y;
-		particles[i].pos_loop += vec4(speed_factor * velocity, 0.0, 0.0);
+		vec2 velocity;
+
+		// Smooth interpolation
+		if(u_interpolation_mode == 0){
+			// Interpolate the x-axis
+			vec2 r1 = vectorField[calcVectorPosition(x_index, y_index)] * (1.0 - xy_dist.x) + vectorField[calcVectorPosition(x_index + 1, y_index)] * xy_dist.x;
+			vec2 r2 = vectorField[calcVectorPosition(x_index, y_index + 1)] * (1.0 - xy_dist.x) + vectorField[calcVectorPosition(x_index + 1, y_index + 1)] * xy_dist.x;
+			// Interpolate the y-axis
+			velocity = r1 * (1.0 - xy_dist.y) + r2 * xy_dist.y;
+
+		} else {
+			// Take closest vector
+			if (xy_dist.x <= 0.5 && xy_dist.y <= 0.5 ){
+				velocity =	vectorField[calcVectorPosition(x_index, y_index)];
+			} else if (xy_dist.x <= 0.5 && xy_dist.y >= 0.5 ) {
+				velocity =	vectorField[calcVectorPosition(x_index, y_index + 1)];
+			} else if (xy_dist.x >= 0.5 && xy_dist.y >= 0.5 ) {
+				velocity =	vectorField[calcVectorPosition(x_index + 1, y_index)];
+			} else  {
+				velocity =	vectorField[calcVectorPosition(x_index + 1, y_index + 1)];
+			}
+
+		}
+			particles[i].pos_loop += vec4(speed_factor * velocity, 0.0, 0.0);
 
 		if(u_cos_color){
 			// Ensures the output is between 0-1
