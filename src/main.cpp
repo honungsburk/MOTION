@@ -16,7 +16,8 @@
 #include <glm/gtx/string_cast.hpp>
 #include "CmdOptions.hpp"
 #include "ImageSequencer.hpp"
-// #include <opencv2/videoio.hpp>
+// #include "VideoCapture.hpp"
+
 #include <random>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -283,12 +284,14 @@ int main(int argc, char **argv)
     particleComputeShader.use();
     particleComputeShader.setBool("u_loop", cmdOptions.perfectLoop);
     particleComputeShader.setInt("u_fps", cmdOptions.fps);
+    particleComputeShader.setInt("u_interpolation_mode", cmdOptions.interpolation_mode);
     particleComputeShader.setBool("u_cos_color", cmdOptions.colorMode != ColorMode::basic);
     particleComputeShader.setBool("u_angle_own_position", cmdOptions.colorMode == ColorMode::anglepos);
     particleComputeShader.setVec3f("u_cc", cmdOptions.cosColorSpeed);
     particleComputeShader.setVec3f("u_dd", cmdOptions.cosColorOffset);
     particleComputeShader.setFloat("u_probability_to_die", cmdOptions.probability_to_die);
     particleComputeShader.setVec2f("u_angle_vector", cmdOptions.cosColorAnglePos);
+    particleComputeShader.setFloat("u_speed", cmdOptions.speed);
 
     postprocessingTrailShader.use();
     postprocessingTrailShader.setBool("u_loop_record_mode", cmdOptions.record && cmdOptions.perfectLoop);
@@ -317,6 +320,13 @@ int main(int argc, char **argv)
         numberOfFramesToRecord = numberOfFramesToRecord * 2;
 
     ImageSequencer imageSequencer(2, cmdOptions.width(), cmdOptions.height());
+
+    // VideoCapture( "../test.mp4"
+    //             , cmdOptions.width()
+    //             , cmdOptions.height()
+    //             , cmdOptions.fps
+    //             , 800000
+    //             );
 
     // render loop
     // -----------
@@ -560,8 +570,41 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
                     return std::make_tuple(a * mid_y / r2 - a * mid_x, -1.0 * a * mid_x / r2 - a * mid_y);
                     };
         break;
-
-
+    case 14 : return [](float x, float y, float width, float height) { 
+                    float a = 0.001;
+                    int mid_x = x - width / 2;
+                    int mid_y = y - height / 2;
+                    return std::make_tuple(a * mid_y, -1.0 * a * mid_x);
+                    };
+        break;
+    case 15 : return [](float x, float y, float width, float height) { 
+                    float a = 0.01;
+                    float x_v = -2.0 * (int(x) % 2) + 1.0;
+                    float y_v = -2.0 * (int(y) % 2) + 1.0;
+                    return std::make_tuple(a * x_v, a * y_v);
+                    };
+        break;
+    case 16 : return [](float x, float y, float width, float height) { 
+                    float a = 0.01;
+                    float x_v = -2.0 * (int(x) % 2) + 1.0;
+                    float y_v = -2.0 * (int(y) % 2) + 1.0;
+                    return std::make_tuple(a * x_v * cos(x * M_PI * 0.236123), a * y_v * cos(y * M_PI * 0.872766836123));
+                    };
+        break;
+    case 17 : return [](float x, float y, float width, float height) { 
+                    float a = 0.01;
+                    float x_v = -2.0 * (int(x) % 2) + 1.0;
+                    float y_v = -2.0 * (int(y) % 2) + 1.0;
+                    return std::make_tuple(a * x_v * y / height, a * y_v * x / width );
+                    };
+        break;
+    case 18 : return [](float x, float y, float width, float height) { 
+                    float a = 0.01;
+                    float clip_x = 2.0 * x / width - 1.0;
+                    float clip_y = 2.0 * y / height - 1.0;
+                    return std::make_tuple(a * clip_x * clip_x / ( 0.1 + clip_y) , a *  clip_y * clip_y / ( 0.1 + clip_x)  );
+                    };
+        break;
 
     }
 

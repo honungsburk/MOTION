@@ -11,23 +11,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-#include <libavcodec/avcodec.h>
-
-#include <libavutil/opt.h>
-#include <libavutil/imgutils.h>
+#include "../include/glad/glad.h" 
+#include "finite_math.hpp"
+extern "C" {
+    #include <libavcodec/avcodec.h>
+    #include <libswscale/swscale.h>
+    #include <libavutil/opt.h>
+    #include <libavutil/imgutils.h>
+}
 
 class VideoCapture
 {
 public:
 
-    VideoCapture(const char *filename, const char *codec_name, unsigned int width, unsigned int height, int framerate, unsigned int bitrate){
+    VideoCapture(const char *filename, unsigned int width, unsigned int height, int framerate, unsigned int bitrate){
 
     /* find the mpeg1video encoder */
-        codec = avcodec_find_encoder_by_name(codec_name);
+        codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+        // codec = avcodec_find_encoder_by_name(codec_name);
         if (!codec) {
-            fprintf(stderr, "Codec '%s' not found\n", codec_name);
+            fprintf(stderr, "Codec '%d' not found\n", AV_CODEC_ID_H264);
             exit(1);
         }
 
@@ -58,10 +61,10 @@ public:
         */
         c->gop_size = 10;
         c->max_b_frames = 1;
-        c->pix_fmt = AV_PIX_FMT_YUV420P;
+        c->pix_fmt = AV_PIX_FMT_YUV420P; // AV_PIX_FMT_RGB8
 
-          if (codec->id == AV_CODEC_ID_H264)
-        av_opt_set(c->priv_data, "preset", "slow", 0);
+        if (codec->id == AV_CODEC_ID_H264)
+            av_opt_set(c->priv_data, "preset", "slow", 0);
 
         /* open it */
         ret = avcodec_open2(c, codec, NULL);
@@ -90,6 +93,9 @@ public:
             fprintf(stderr, "Could not allocate the video frame data\n");
             exit(1);
         }
+
+        frame_order = 1;
+        sws = sws_getContext(c->width, c->height, AV_PIX_FMT_RGB32, c->width, c->height, AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, 0, 0, 0);
     }
 
     void addFrame(){
@@ -107,29 +113,24 @@ public:
          */
         ret = av_frame_make_writable(frame);
         if (ret < 0)
-            exit(1);
+            exit(1); // Wait... you should throw error instead!
 
-        /* Prepare a dummy image.
-           In real code, this is where you would have your own logic for
-           filling the frame. FFmpeg does not care what you put in the
-           frame.
-         */
-        /* Y */
-        for (y = 0; y < c->height; y++) {
-            for (x = 0; x < c->width; x++) {
-                frame->data[0][y * frame->linesize[0] + x] = x + y + i * 3;
-            }
-        }
+        size_t nvals = 4 * c->width * c->height; //GL_BGRA
+        pixels = (GLubyte *) realloc(pixels, nvals * sizeof(GLubyte));
+        glReadPixels(0, 0, c->width, c->height, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
 
-        /* Cb and Cr */
-        for (y = 0; y < c->height/2; y++) {
-            for (x = 0; x < c->width/2; x++) {
-                frame->data[1][y * frame->linesize[1] + x] = 128 + y + i * 2;
-                frame->data[2][y * frame->linesize[2] + x] = 64 + x + i * 5;
-            }
-        }
+        // CONVERT TO YUV AND ENCODE
+        // int frame_size = avpicture_get_size(AV_PIX_FMT_YUV420P, c->width, c->height);
+        // c->frame_buffer = malloc(frame_size);
 
-        frame->pts = i;
+        //avpicture_fill((AVPicture *) frame, (uint8_t *) c->frame_buffer, AV_PIX_FMT_YUV420P, c->width, c->height);
+        
+        uint8_t *in_data[1] = {(uint8_t *) pixels};
+        int in_linesize[1] = { 4*c->width }; // RGBA stride
+        sws_scale(sws, in_data, in_linesize, 0, c->height, frame->data, frame->linesize);
+
+        frame->pts = frame_order;
+        frame_order++;
 
         /* encode the image */
         encode(c, frame, pkt, f);
@@ -156,9 +157,12 @@ public:
 
 
 private:
+    GLubyte *pixels = NULL;
+    struct SwsContext *sws;
+
     const AVCodec *codec;
     AVCodecContext *c= NULL;
-    int i, ret, x, y;
+    int frame_order, ret;
     FILE *f;
     AVFrame *frame;
     AVPacket *pkt;

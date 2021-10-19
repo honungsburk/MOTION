@@ -42,6 +42,9 @@ public:
     float probability_to_die;
     float trail_mix_rate = 0.9;
 
+    unsigned int interpolation_mode;
+    float speed;
+
     // Resolution dependent
     float point_size;
     unsigned int nbr_particles;
@@ -144,6 +147,25 @@ public:
         if(vm.count("trail-mix-rate"))
             trail_mix_rate = vm["trail-mix-rate"].as<float>();         
         
+        if(vm.count("speed"))
+            speed = vm["speed"].as<float>();    
+
+        if (vm.count("interpolation-mode")){
+            std::string interpolation_mode_s = vm["interpolation-mode"].as<std::string>();
+            if(interpolation_mode_s == "smooth") {
+                interpolation_mode = 0;
+            } else if (interpolation_mode_s == "min") {
+                interpolation_mode = 1;
+            } else {
+                std::cout 
+                    << "WARNING: '--interpolation-mode "
+                    << interpolation_mode_s
+                    << "' only accepts 'smooth' or 'min'" 
+                    << std::endl;
+                failed = true;
+            }
+        }
+
         if (vm.count("color-mode")){
             std::string color_mode = vm["color-mode"].as<std::string>();
             if(color_mode == "basic") {
@@ -269,6 +291,7 @@ private:
             ("height-ratio, h", value<unsigned int>()->default_value(9), "Width-Ratio like 9 in 16:9")
             ("pixels-per-ratio", value<unsigned int>()->default_value(80), "The number of pixels per ratio")
             ("vectors-per-ratio", value<unsigned int>()->default_value(1200), "The number of vectors per ratio")
+            ("speed", value<float>()->default_value(1.0), "modify the speed of the particles")
             ("point-size", value<float>()->default_value(2.0f), "The pixel size of the particles")
             ("nbr-particles", value<unsigned int>()->default_value(1024), "The number of particles in the simulation")
             ("nbr-compute-groups", value<unsigned int>()->default_value(1024), "The number of compute groups issues to the graphics card")
@@ -276,6 +299,7 @@ private:
             ("background-color", value<std::string>()->default_value("000000"), "Background Color as '000000'")
             ("background-alpha", value<float>()->default_value(1.0), "Background alpha value between 0.0-1.0")
             ("vector-field-function", value<unsigned int>()->default_value(0), "Which function to use when creating the vector field")
+            ("interpolation-mode", value<std::string>()->default_value("smooth"), "Which interpolation mode to use")
             ("probability-to-die", value<float>()->default_value(0.01f), "The probability for a particle to die")
             ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background")
             ("cos-color-speed", value<std::vector<float>>()->multitoken(), "The speed of change for the red, green, and blue components when using cos coloring")
