@@ -7,11 +7,13 @@
 #include <string.h>
 #include "../include/glad/glad.h" 
 #include "finite_math.hpp"
+#include <stdexcept>
 extern "C" {
     #include <libavcodec/avcodec.h>
     #include <libswscale/swscale.h>
     #include <libavutil/opt.h>
     #include <libavutil/imgutils.h>
+    #include <libavformat/avformat.h>
 }
 
 class VideoCapture
@@ -41,6 +43,12 @@ public:
         /* put sample parameters */
         codex_ctx->bit_rate = bitrate;
         /* resolution must be a multiple of two */
+        if(width % 2 != 0)
+            throw std::invalid_argument( "The width must be devisible by two" );
+
+        if(height % 2 != 0)
+            throw std::invalid_argument( "The height must be devisible by two" );
+
         codex_ctx->width = width;
         codex_ctx->height = height;
         /* frames per second */
@@ -95,9 +103,18 @@ public:
                             , codex_ctx->width
                             , codex_ctx->height
                             , AV_PIX_FMT_YUV420P
-                            , SWS_FAST_BILINEAR
+                            , SWS_FAST_BILINEAR // Change this???
                             , 0, 0, 0);
-        //sws = sws_getContext(codex_ctx->width, codex_ctx->height, (AVPixelFormat) sws->format, codex_ctx->width, codex_ctx->height, AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, 0, 0, 0);
+
+
+        // Init Muxing
+        avFormatContext = avformat_alloc_context();
+        avStream = avformat_new_stream(avFormatContext, codec);
+        ret = avformat_write_header(avFormatContext, &avDict);
+        if(ret < 0){
+            fprintf(stderr, "Could not write header to the output media file\n");
+            exit(1);
+        }
     }
 
     void addFrame(){
@@ -114,19 +131,21 @@ public:
            for the frame only if necessary.
          */
         ret = av_frame_make_writable(frame);
-        if (ret < 0)
+        if (ret < 0){
+            fprintf(stderr, "Could not make the frame writable\n");
             exit(1); // Wait... you should throw error instead!
+        }
 
         size_t nvals = 4 * codex_ctx->width * codex_ctx->height; //GL_BGRA
-        pixels = (GLubyte *) realloc(pixels, nvals * sizeof(GLubyte));
+        pixels = (GLubyte *) realloc(pixels, nvals * sizeof(GLubyte)); // I don't think I need to do this every time since the size is constant
         glReadPixels(0, 0, codex_ctx->width, codex_ctx->height, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
 
         // CONVERT TO YUV AND ENCODE
-        int frame_size = avpicture_get_size(AV_PIX_FMT_YUV420P, codex_ctx->width, codex_ctx->height);
-        frame_buffer = (uint8_t *) realloc(frame_buffer, frame_size);
-
-        avpicture_fill((AVPicture *) frame, (uint8_t *) frame_buffer, AV_PIX_FMT_YUV420P, codex_ctx->width, codex_ctx->height);
-
+        ret =  av_image_alloc(frame->data, frame->linesize, codex_ctx->width, codex_ctx->height, AV_PIX_FMT_YUV420P, 32);
+        if (ret < 0){
+            fprintf(stderr, "Could not allocate the image\n");
+            exit(1); // Wait... you should throw error instead!
+        }
         // Compensate for OpenGL y-axis pointing upwards and ffmpeg y-axis pointing downwards        
         uint8_t *in_data[1] = {(uint8_t *) pixels + (codex_ctx->height-1)*codex_ctx->width*4}; // address of the last line
         int in_linesize[1] = {- codex_ctx->width * 4}; // negative stride
@@ -156,6 +175,7 @@ public:
             fwrite(endcode, 1, sizeof(endcode), f);
         fclose(f);
 
+        //av_freep(&frame->data[0]);
         avcodec_free_context(&codex_ctx);
         av_frame_free(&frame);
         av_packet_free(&pkt);
@@ -164,15 +184,20 @@ public:
 
 
 private:
+    // Muxing
+    AVFormatContext* avFormatContext = NULL;
+    AVStream* avStream;
+    //TODO: fill with AVFormatContext values???
+    AVDictionary *avDict = NULL; // "create" an empty dictionary
+
+    // Raw Stream
     GLubyte *pixels = NULL;
     struct SwsContext *sws;
-
     const AVCodec *codec;
     AVCodecContext *codex_ctx= NULL;
     int frame_order, ret;
     FILE *f;
     AVFrame *frame;
-    uint8_t *frame_buffer;
     AVPacket *pkt;
     uint8_t endcode[4] = { 0, 0, 1, 0xb7 };
 
@@ -202,7 +227,8 @@ void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
             }
 
             printf("Write packet %3" PRId64 " (size=%5d)\n", pkt->pts, pkt->size);
-            fwrite(pkt->data, 1, pkt->size, outfile);
+            av_write_frame(avFormatContext, pkt);
+            //fwrite(pkt->data, 1, pkt->size, outfile);
             av_packet_unref(pkt);
         }
     }

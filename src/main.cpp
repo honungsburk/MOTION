@@ -16,7 +16,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include "CmdOptions.hpp"
 #include "ImageSequencer.hpp"
-#include "VideoCapture.hpp"
+// #include "VideoCapture2.hpp"
 
 #include <random>
 
@@ -321,12 +321,12 @@ int main(int argc, char **argv)
 
     ImageSequencer imageSequencer(2, cmdOptions.width(), cmdOptions.height());
 
-    VideoCapture videoCapture( "../test.mp4"
-                            , cmdOptions.width()
-                            , cmdOptions.height()
-                            , cmdOptions.fps
-                            , 800000
-                            );
+    // VideoCapture2 videoCapture( "../test.mp4"
+    //                         , cmdOptions.width()
+    //                         , cmdOptions.height()
+    //                         , cmdOptions.fps
+    //                         , 800000
+    //                         );
 
     // render loop
     // -----------
@@ -456,7 +456,7 @@ int main(int argc, char **argv)
             //     std::cout << filename.str().c_str() << std::endl;
             // }
 
-            videoCapture.addFrame();
+            // videoCapture.addFrame();
 
 
             if(numberOfFramesToRecord - 1 == frameNbr ){
@@ -467,7 +467,7 @@ int main(int argc, char **argv)
         frameNbr += 1;
     }
 
-    videoCapture.close();
+    // videoCapture.close();
 
     // outputVideo.release();
 
@@ -607,6 +607,45 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
                     float clip_y = 2.0 * y / height - 1.0;
                     return std::make_tuple(a * clip_x * clip_x / ( 0.1 + clip_y) , a *  clip_y * clip_y / ( 0.1 + clip_x)  );
                     };
+        break;
+    case 19 : return [](float x, float y, float width, float height) { 
+                    float a = 0.01;
+                    float twirl_size = 20.0;
+                    float clip_x = 2.0 * x / width - 1.0;
+                    float clip_y = 2.0 * y / height - 1.0;
+                    float radial_exponent = 1.5;
+                    float length = sqrt(clip_x*clip_x + clip_y*clip_y);
+                    float radial_coeff = pow(length, radial_exponent);
+                    float new_x = -clip_y/length + radial_coeff*sin(twirl_size*y);
+                    float new_y =  clip_x/length + radial_coeff*cos(twirl_size*x);
+                    return std::make_tuple(a * new_x , a *  new_y  );
+                    };
+        break;
+    case 20 : return [](float x, float y, float width, float height) { 
+                float a = 0.01;
+                float twirl_size = 20.0;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float radial_exponent = 1.5;
+                float length = sqrt(clip_x*clip_x + clip_y*clip_y);
+                float radial_coeff = pow(length, radial_exponent);
+                float new_x =  clip_x/length + radial_coeff*sin(twirl_size*y);
+                float new_y =  clip_y/length + radial_coeff*cos(twirl_size*x);
+                return std::make_tuple(a * new_x , a *  new_y  );
+                };
+        break;
+    case 21 : return [](float x, float y, float width, float height) { 
+                float a = 0.01;
+                float twirl_size = 20.0;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float radial_exponent = 1.5;
+                float length = sqrt(clip_x*clip_x + clip_y*clip_y);
+                float radial_coeff = pow(length, radial_exponent);
+                float new_x =  clip_y/(length + 0.01) + radial_coeff*sin(twirl_size*x);
+                float new_y =  clip_x/(length + 0.01) + radial_coeff*sin(twirl_size*y);
+                return std::make_tuple(a * new_x , a *  new_y  );
+                };
         break;
 
     }
