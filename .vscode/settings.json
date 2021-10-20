@@ -69,6 +69,11 @@
         "queue": "cpp",
         "set": "cpp",
         "valarray": "cpp",
-        "version": "cpp"
+        "version": "cpp",
+        "cfenv": "cpp",
+        "complex": "cpp",
+        "unordered_set": "cpp",
+        "typeindex": "cpp",
+        "variant": "cpp"
     }
 }

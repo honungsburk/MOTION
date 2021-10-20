@@ -16,7 +16,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include "CmdOptions.hpp"
 #include "ImageSequencer.hpp"
-// #include "VideoCapture2.hpp"
+#include "VideoCapture2.hpp"
 
 #include <random>
 
@@ -285,8 +285,9 @@ int main(int argc, char **argv)
     particleComputeShader.setBool("u_loop", cmdOptions.perfectLoop);
     particleComputeShader.setInt("u_fps", cmdOptions.fps);
     particleComputeShader.setInt("u_interpolation_mode", cmdOptions.interpolation_mode);
-    particleComputeShader.setBool("u_cos_color", cmdOptions.colorMode != ColorMode::basic);
-    particleComputeShader.setBool("u_angle_own_position", cmdOptions.colorMode == ColorMode::anglepos);
+    particleComputeShader.setInt("u_color_mode", cmdOptions.colorMode);
+    particleComputeShader.setVec3f("u_aa", cmdOptions.cosColorBase);
+    particleComputeShader.setVec3f("u_bb", cmdOptions.cosColorAmplitude);
     particleComputeShader.setVec3f("u_cc", cmdOptions.cosColorSpeed);
     particleComputeShader.setVec3f("u_dd", cmdOptions.cosColorOffset);
     particleComputeShader.setFloat("u_probability_to_die", cmdOptions.probability_to_die);
@@ -321,12 +322,12 @@ int main(int argc, char **argv)
 
     ImageSequencer imageSequencer(2, cmdOptions.width(), cmdOptions.height());
 
-    // VideoCapture2 videoCapture( "../test.mp4"
-    //                         , cmdOptions.width()
-    //                         , cmdOptions.height()
-    //                         , cmdOptions.fps
-    //                         , 800000
-    //                         );
+    VideoCapture2 videoCapture( "../test.mp4"
+                            , cmdOptions.width()
+                            , cmdOptions.height()
+                            , cmdOptions.fps
+                            , 8000000
+                            );
 
     // render loop
     // -----------
@@ -456,7 +457,7 @@ int main(int argc, char **argv)
             //     std::cout << filename.str().c_str() << std::endl;
             // }
 
-            // videoCapture.addFrame();
+            videoCapture.addFrame();
 
 
             if(numberOfFramesToRecord - 1 == frameNbr ){
@@ -467,7 +468,7 @@ int main(int argc, char **argv)
         frameNbr += 1;
     }
 
-    // videoCapture.close();
+    videoCapture.close();
 
     // outputVideo.release();
 

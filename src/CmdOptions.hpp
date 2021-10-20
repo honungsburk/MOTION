@@ -14,8 +14,6 @@ struct ColorSchema {
     glm::vec4 backgroundColor;
 };
 
-enum ColorMode { basic, anglebasic, anglepos };
-
 using namespace boost::program_options;
 
 // Contains all the options that has been set for the application.
@@ -50,7 +48,9 @@ public:
     unsigned int nbr_particles;
 
     // Coloring
-    ColorMode colorMode;
+    int colorMode;
+    glm::vec3 cosColorBase;
+    glm::vec3 cosColorAmplitude;
     glm::vec3 cosColorSpeed;
     glm::vec3 cosColorOffset;
     glm::vec2 cosColorAnglePos;
@@ -169,16 +169,18 @@ public:
         if (vm.count("color-mode")){
             std::string color_mode = vm["color-mode"].as<std::string>();
             if(color_mode == "basic") {
-                colorMode = basic;
+                colorMode = 0;
             } else if (color_mode == "angle-basic") {
-                colorMode = anglebasic;
+                colorMode = 1;
             } else if (color_mode == "angle-pos") {
-                colorMode = anglepos;
+                colorMode = 2;
+            } else if (color_mode == "velocity") {
+                colorMode = 3;
             } else {
                 std::cout 
                     << "WARNING: '--color-mode "
                     << color_mode
-                    << "' only accepts 'basic' or 'angle'" 
+                    << "' only accepts 'basic', 'angle-basic', 'angle-pos' or 'velocity'" 
                     << std::endl;
                 failed = true;
             }
@@ -195,6 +197,36 @@ public:
                     << std::endl;
                 failed = true;
             }
+        }
+
+        if(vm.count("cos-color-base")){
+            std::vector<float> cosBaseTemp = vm["cos-color-base"].as<std::vector<float>>();
+            if(cosBaseTemp.size() == 3){
+                cosColorBase = glm::vec3(cosBaseTemp[0],cosBaseTemp[1], cosBaseTemp[2]);
+            } else {
+                std::cout 
+                    << "WARNING: '--cos-color-base ...' "
+                    << " needs three floating point numbers" 
+                    << std::endl;
+                failed = true;
+            }
+        } else {
+            cosColorBase = glm::vec3(0.5, 0.5, 0.5);
+        }
+
+        if(vm.count("cos-color-amplitude")){
+            std::vector<float> cosAmplitudeTemp = vm["cos-color-amplitude"].as<std::vector<float>>();
+            if(cosAmplitudeTemp.size() == 3){
+                cosColorAmplitude = glm::vec3(cosAmplitudeTemp[0],cosAmplitudeTemp[1], cosAmplitudeTemp[2]);
+            } else {
+                std::cout 
+                    << "WARNING: '--cos-color-amplitude ...' "
+                    << " needs three floating point numbers" 
+                    << std::endl;
+                failed = true;
+            }
+        } else {
+            cosColorAmplitude = glm::vec3(0.5, 0.5, 0.5);
         }
 
         if(vm.count("cos-color-speed")){
@@ -302,6 +334,8 @@ private:
             ("interpolation-mode", value<std::string>()->default_value("smooth"), "Which interpolation mode to use")
             ("probability-to-die", value<float>()->default_value(0.01f), "The probability for a particle to die")
             ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background")
+            ("cos-color-base", value<std::vector<float>>()->multitoken(), "The base which we oscillate around")
+            ("cos-color-amplitude", value<std::vector<float>>()->multitoken(), "The amplitude of the cos color component ")
             ("cos-color-speed", value<std::vector<float>>()->multitoken(), "The speed of change for the red, green, and blue components when using cos coloring")
             ("cos-color-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring")
             ("cos-angle-offset", value<std::vector<float>>()->multitoken(), "The angle/position the angle is computed against")

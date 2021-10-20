@@ -129,6 +129,16 @@ public:
         if (avOutputFormat->flags & AVFMT_GLOBALHEADER)
             codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
+        /* open the codec */
+        AVDictionary *opt = NULL;
+        av_dict_copy(&opt, avDict, 0);
+        ret = avcodec_open2(codec_ctx, codec, &opt);
+        av_dict_free(&opt);
+        if (ret < 0) {
+            fprintf(stderr, "Could not open video codec: %s\n", av_err2str(ret));
+            exit(1);
+        }
+
 
         frame = alloc_frame(codec_ctx->pix_fmt, codec_ctx->width, codec_ctx->height);
         if (!frame) {

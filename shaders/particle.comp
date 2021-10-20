@@ -51,11 +51,12 @@ uniform int u_width;
 uniform int u_height;
 uniform float u_time;
 
-uniform bool u_cos_color;
+uniform int u_color_mode;
+uniform vec3 u_aa;
+uniform vec3 u_bb;
 uniform vec3 u_cc;
 uniform vec3 u_dd;
 uniform vec2 u_angle_vector;
-uniform bool u_angle_own_position;
 
 uniform float u_probability_to_die;
 
@@ -173,16 +174,18 @@ void main()
 		}
 			particles[i].pos_loop += vec4(speed_factor * velocity, 0.0, 0.0);
 
-		if(u_cos_color){
-			// Ensures the output is between 0-1
-			vec3 aa = vec3(0.5);
-			vec3 bb = vec3(0.5);
-			float angle = acos(dot(normalize(velocity), normalize(u_angle_vector)));
-			if(u_angle_own_position){
-				float angle = acos(dot(normalize(velocity), normalize(pos + u_angle_vector)));
-			}
+		if(u_color_mode == 1){
 
-			particles[i].color = vec4(cos_color(angle, aa, bb, u_cc, u_dd), 1.0);
+			float angle = acos(dot(normalize(velocity), normalize(u_angle_vector)));
+
+			particles[i].color = vec4(cos_color(angle, u_aa, u_bb, u_cc, u_dd), 1.0);
+		} else if(u_color_mode == 2) {
+
+			float angle = acos(dot(normalize(velocity), normalize(pos + u_angle_vector)));
+
+			particles[i].color = vec4(cos_color(angle, u_aa, u_bb, u_cc, u_dd), 1.0);
+		} else if(u_color_mode == 3) {
+			particles[i].color = vec4(cos_color( 100 * length(velocity), u_aa, u_bb, u_cc, u_dd), 1.0);
 		}
 	} else {
 		// We park the particles outside clipspace so that we can't see them
