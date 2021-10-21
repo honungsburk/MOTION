@@ -9,14 +9,14 @@
 #include <stdexcept>
 #include <boost/program_options.hpp>
 
-struct ColorSchema {
-    glm::vec4 particleColor;
-    glm::vec4 backgroundColor;
-};
 
 using namespace boost::program_options;
 
-// Contains all the options that has been set for the application.
+/**
+    CS-11 Asn 2: Parse all application options from the command line and config.
+    @file CmdOptions.hpp
+    @author Frank Hampus Weslien
+*/
 class CmdOptions
 {
 public:
@@ -78,7 +78,11 @@ public:
         parse(argc, argv);
     }
 
-
+    /**
+        Parse and fill the values from the command line.
+        @param argc the number of arguments given to the main function
+        @param argv the arguments from the main function
+    */
     void parse(int argc, char **argv){
         variables_map vm;
         store(parse_command_line(argc, argv, cmdline_options), vm);
