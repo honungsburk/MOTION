@@ -134,6 +134,23 @@ int main(int argc, char **argv)
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    void renderFrame( GLFWwindow*  window
+                    , unsigned int frameNbr
+                    , Shader particleComputeShader
+                    , GLuint PARTICLE_VAO
+                    , GLuint PARTICLE_VBO // Necessary???
+                    , GLuint particleFBO
+                    , Shader particleShader
+                    , GLuint particleTexture
+                    , GLuint inTexture
+                    , GLuint outTexture
+                    , Shader postprocessingTrailShader
+                    , GLuint backgroundFBOs[]
+                    , GLuint backgroundTextures[]
+                    , Shader postprocessingShader
+                    , GLuint POST_PROCESSING_VAO
+                    );
+
     // Set model
     // ------------------------------------
     particleShader.use();
@@ -307,7 +324,6 @@ int main(int argc, char **argv)
 
     // Loop Variables
     // -----------
-    bool shouldRecord = cmdOptions.record;
     int numberOfFramesToRecord = cmdOptions.fps * cmdOptions.lengthInSeconds;    
     bool exit = false;
     //Used to pingpong between FBO:s
@@ -316,17 +332,107 @@ int main(int argc, char **argv)
 
     unsigned int frameNbr = 0;
 
-    VideoCapture videoCapture( cmdOptions.outFileName.c_str()
-                            , cmdOptions.width()
-                            , cmdOptions.height()
-                            , cmdOptions.fps
-                            , cmdOptions.bitrate
-                            );
-
     // render loop
     // -----------
-    while (!glfwWindowShouldClose(window) && !exit )
-    {
+    if (!cmdOptions.record){
+        while (!glfwWindowShouldClose(window) && !exit )
+        {
+            unsigned int inTexture = pingPongFBOIndex;
+            unsigned int outTexture = (pingPongFBOIndex + 1) % 2;
+
+            renderFrame( window
+                    , frameNbr 
+                    , particleComputeShader 
+                    , PARTICLE_VAO 
+                    , PARTICLE_VBO 
+                    , particleFBO
+                    , particleShader
+                    , particleTexture
+                    , inTexture
+                    , outTexture
+                    , postprocessingTrailShader
+                    , backgroundFBOs
+                    , backgroundTextures
+                    , postprocessingShader
+                    , POST_PROCESSING_VAO
+            );
+
+            pingPongFBOIndex = outTexture;
+
+            frameNbr += 1;
+        }
+    } else {
+        VideoCapture videoCapture( cmdOptions.outFileName.c_str()
+                        , cmdOptions.width()
+                        , cmdOptions.height()
+                        , cmdOptions.fps
+                        , cmdOptions.bitrate
+                        );
+        while (!glfwWindowShouldClose(window) && !exit )
+        {
+            unsigned int inTexture = pingPongFBOIndex;
+            unsigned int outTexture = (pingPongFBOIndex + 1) % 2;
+
+            renderFrame( window
+                    , frameNbr 
+                    , particleComputeShader 
+                    , PARTICLE_VAO 
+                    , PARTICLE_VBO 
+                    , particleFBO
+                    , particleShader
+                    , particleTexture
+                    , inTexture
+                    , outTexture
+                    , postprocessingTrailShader
+                    , backgroundFBOs
+                    , backgroundTextures
+                    , postprocessingShader
+                    , POST_PROCESSING_VAO
+            );
+
+            pingPongFBOIndex = outTexture;
+
+            frameNbr += 1;
+
+            // Save Image
+            //---------------------------------------------------------
+            videoCapture.addFrame();
+
+            if(numberOfFramesToRecord == frameNbr ){
+                exit = true;
+            }
+        }
+
+        videoCapture.close();
+    }
+
+    // optional: de-allocate all resources once they've outlived their purpose:
+    // ------------------------------------------------------------------------
+    glDeleteVertexArrays(1, &PARTICLE_VAO);
+    glDeleteBuffers(1, &PARTICLE_VBO);
+
+    // glfw: terminate, clearing all previously allocated GLFW resources.
+    // ------------------------------------------------------------------
+    glfwTerminate();
+    return 0;
+}
+
+void renderFrame( GLFWwindow*  window
+                , unsigned int frameNbr
+                , Shader particleComputeShader
+                , GLuint PARTICLE_VAO
+                , GLuint PARTICLE_VBO // Necessary???
+                , GLuint particleFBO
+                , Shader particleShader
+                , GLuint particleTexture
+                , GLuint inTexture
+                , GLuint outTexture
+                , Shader postprocessingTrailShader
+                , GLuint backgroundFBOs[]
+                , GLuint backgroundTextures[]
+                , Shader postprocessingShader
+                , GLuint POST_PROCESSING_VAO
+                ){
         // per-frame time logic
         // --------------------
         float currentFrame = glfwGetTime();
@@ -341,7 +447,7 @@ int main(int argc, char **argv)
         // ------
         particleComputeShader.use();
         particleComputeShader.setFloat("u_time", currentFrame);
-        particleComputeShader.setInt("u_loop_iteration", frameNbr);       
+        particleComputeShader.setInt("u_loop_iteration", frameNbr); // TODO: REMOVE THIS!
 
 
         glBindVertexArray(PARTICLE_VAO);
@@ -376,8 +482,6 @@ int main(int argc, char **argv)
         // and reduce the alpha as we ping-pong back and forth.
         // Not that this means we shouldn't be clearing the buffers.
         // ------
-        unsigned int inTexture = pingPongFBOIndex;
-        unsigned int outTexture = (pingPongFBOIndex + 1) % 2;
 
         glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[outTexture]);
         postprocessingTrailShader.use();
@@ -395,7 +499,6 @@ int main(int argc, char **argv)
         glBindVertexArray(POST_PROCESSING_VAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        pingPongFBOIndex = outTexture;
 
         // Post-Processing
         // ------
@@ -424,34 +527,9 @@ int main(int argc, char **argv)
         glfwSwapBuffers(window);
         glfwPollEvents();
     
-        // Save Image
-        //---------------------------------------------------------
-        if(shouldRecord){
-
-            videoCapture.addFrame();
-
-            if(numberOfFramesToRecord - 1 == frameNbr ){
-                exit = true;
-            }
-        }
-
-        frameNbr += 1;
-    }
-
-    videoCapture.close();
-
-    // outputVideo.release();
-
-    // optional: de-allocate all resources once they've outlived their purpose:
-    // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &PARTICLE_VAO);
-    glDeleteBuffers(1, &PARTICLE_VBO);
-
-    // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
-    glfwTerminate();
-    return 0;
 }
+
+
 
 std::function<std::tuple<float, float>(float, float, float, float)> createVectorFieldFn(unsigned int functionNbr){ 
     auto defaultFN = [](float x, float y, float width, float height) { 
