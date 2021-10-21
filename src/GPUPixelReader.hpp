@@ -46,7 +46,7 @@ public:
 
     /**
         Reads pixels from the GPU.
-        @param pixels the variable to which will be populated with a pointer  
+        @param pixels the reference to which will be populated with a pointer  
         pointing to the pixels returned from the GPU. It will not be assigned such
         a pointer until the return value is non-negative.
         @return the current frame of pixels that "pixels" will point to, it is
