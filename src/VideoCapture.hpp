@@ -9,6 +9,7 @@
 #include "FiniteMathPatch.hpp"
 #include <stdexcept>
 #include "GPUPixelReader.hpp"
+
 extern "C" {
     #include <libavcodec/avcodec.h>
     #include <libswscale/swscale.h>
@@ -53,7 +54,11 @@ av_always_inline std::string av_ts2timestring(int ts, AVRational *tb) {
 #define av_ts2timestr(ts, tb) av_ts2timestring(ts, tb).c_str()
 #endif
 
-
+/**
+    CS-11 Asn 2: Encode video from OpenGL
+    @file VideoCapture.hpp
+    @author Frank Hampus Weslien
+*/
 class VideoCapture
 {
 public:
@@ -71,7 +76,7 @@ public:
             avformat_alloc_output_context2(&avFormatContext, NULL, "mpeg", filename);
         }
         if (!avFormatContext)
-            exit(1);
+            throw std::runtime_error("Could not allocate a formatting context");
 
         avOutputFormat = avFormatContext->oformat;
 
@@ -83,41 +88,45 @@ public:
         AVCodecID codec_id = AV_CODEC_ID_H264;
         codec = avcodec_find_encoder(codec_id);
         if (!codec) {
-            fprintf(stderr, "Could not find encoder for '%s'\n",
-                    avcodec_get_name(codec_id));
-            exit(1);
+            char buffer[50];
+            sprintf (buffer, "Could not find encoder for '%s'\n", avcodec_get_name(codec_id));
+            throw std::invalid_argument(buffer);
         }
 
         pkt = av_packet_alloc();
-        if (!pkt) {
-            fprintf(stderr, "Could not allocate AVPacket\n");
-            exit(1);
-        }
+        if (!pkt) 
+            throw std::runtime_error("Could not allocate AVPacket");
 
         avStream = avformat_new_stream(avFormatContext, NULL);
-        if (!avStream) {
-            fprintf(stderr, "Could not allocate stream\n");
-            exit(1);
-        }
+        if (!avStream) 
+            throw std::runtime_error("Could not allocate stream");
+
         avStream->id = avFormatContext->nb_streams-1;
         codec_ctx = avcodec_alloc_context3(codec);
-        if (!codec_ctx) {
-            fprintf(stderr, "Could not alloc an encoding context\n");
-            exit(1);
-        }
+        if (!codec_ctx)
+            throw std::runtime_error("Could not alloc an encoding context");
+
 
         codec_ctx->codec_id = codec_id;
-        /* put sample parameters */
         codec_ctx->bit_rate = bitrate;
+
         /* resolution must be a multiple of two */
-        if(width % 2 != 0)
-            throw std::invalid_argument( "The width must be devisible by two" );
-
-        if(height % 2 != 0)
-            throw std::invalid_argument( "The height must be devisible by two" );
-
+        if(width % 2 != 0){
+            char buffer[50];
+            sprintf(buffer, "The width must be devisible by two but was '%d'", width);
+            throw std::invalid_argument(buffer);
+        }
         codec_ctx->width = width;
+
+        if(height % 2 != 0){
+            char buffer[50];
+            sprintf(buffer, "The height must be devisible by two but was '%d'", height);
+            throw std::invalid_argument(buffer);
+        }
+
         codec_ctx->height = height;
+
+
         /* frames per second */
         codec_ctx->framerate = (AVRational){framerate, 1};
 
@@ -141,23 +150,20 @@ public:
         ret = avcodec_open2(codec_ctx, codec, &opt);
         av_dict_free(&opt);
         if (ret < 0) {
-            fprintf(stderr, "Could not open video codec: %s\n", av_err2str(ret));
-            exit(1);
+            char buffer[50];
+            sprintf(buffer, "Could not open video codec: %s\n", av_err2str(ret));
+            throw std::invalid_argument(buffer);
         }
-
 
         frame = alloc_frame(codec_ctx->pix_fmt, codec_ctx->width, codec_ctx->height);
-        if (!frame) {
-            fprintf(stderr, "Could not allocate video frame\n");
-            exit(1);
-        }
+        if (!frame)
+            throw std::runtime_error("Could not allocate video frame");
+        
 
         /* copy the stream parameters to the muxer */
         ret = avcodec_parameters_from_context(avStream->codecpar, codec_ctx);
-        if (ret < 0) {
-            fprintf(stderr, "Could not copy the stream parameters\n");
-            exit(1);
-        }
+        if (ret < 0)
+            throw std::runtime_error("Could not copy the stream parameters");
 
         // Color fromat COnversion
 
@@ -178,18 +184,18 @@ public:
         if (!(avOutputFormat->flags & AVFMT_NOFILE)) {
             ret = avio_open(&avFormatContext->pb, filename, AVIO_FLAG_WRITE);
             if (ret < 0) {
-                fprintf(stderr, "Could not open '%s': %s\n", filename,
-                        av_err2str(ret));
-                exit(1);
+                char buffer[50];
+                sprintf(buffer, "Could not open '%s': %s\n", filename, av_err2str(ret));
+                throw std::invalid_argument(buffer);
             }
         }
         /* Write the stream header, if any. */
         ret = avformat_write_header(avFormatContext, &avDict);
-        if (ret < 0) {
-            fprintf(stderr, "Error occurred when opening output file: %s\n",
-                    av_err2str(ret));
-            exit(1);
-        }
+        if (ret < 0){
+                char buffer[50];
+                sprintf(buffer,  "Error occurred when opening output file: %s\n", av_err2str(ret));
+                throw std::invalid_argument(buffer);
+        } 
 
     }
 
