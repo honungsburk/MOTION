@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../include/glad/glad.h" 
-#include "finite_math.hpp"
+#include "FiniteMathPatch.hpp"
 #include <stdexcept>
 #include "GPUPixelReader.hpp"
 extern "C" {

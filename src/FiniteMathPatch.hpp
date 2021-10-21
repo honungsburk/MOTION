@@ -1,5 +1,8 @@
 #include <math.h>
 
+/** This file exists solely so as to add functions that have been removed from
+ * ubuntu 20.
+ */
 extern "C" {
 
     double __exp_finite(double x) { return exp(x); }
