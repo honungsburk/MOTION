@@ -11,12 +11,21 @@
 #include <sstream>
 #include <iostream>
 
+/**
+    CS-11 Asn 2: Create OpenGL shader program from source code.
+    @file Shader.hpp
+    @author Frank Hampus Weslien
+*/
 class Shader
 {
-public:
     unsigned int ID;
-    // constructor generates the shader on the fly
-    // ------------------------------------------------------------------------
+public:
+
+    /**
+        Constructs a basic OpenGL shader program.
+        @param vertexPath the path to the vertex shader source code.
+        @param fragmentPath the path to the fragment shader source code.
+    */
     Shader(const char* vertexPath, const char* fragmentPath)
     {
         // 1. retrieve the vertex/fragment source code from filePath
@@ -39,7 +48,10 @@ public:
 
     }
 
-
+    /**
+        Constructs a OpenGL compute shader program.
+        @param computePath the path to the compute shader source code.
+    */
     Shader(const char* computePath)
     {
         std::string computeCode = loadSourceCode(computePath);
@@ -57,17 +69,18 @@ public:
         glDeleteShader(compute);
     }
 
-    //This is nonseense just to allow me to create dummy shaders
+    //This is nonsense just to allow me to create dummy shaders
     Shader(){
         ID = 19726387;
     }
 
-    void deleteProgram(){
+    ~Shader(){
         glDeleteProgram(ID);
     }
 
-    // activate the shader
-    // ------------------------------------------------------------------------
+    /**
+        Set this shader to the current active program in OpenGL.
+    */
     void use() 
     { 
         glUseProgram(ID); 
