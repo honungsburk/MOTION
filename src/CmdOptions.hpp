@@ -62,12 +62,12 @@ public:
     std::string record_folder = "../images/";
     std::string record_to_file = "../motion.mp4";
     std::string codec_name = "265/HVEC";
-    unsigned int bitrate = 800000;
 
     unsigned int fps;
     bool record;
-    bool perfectLoop = false;
+    unsigned int bitrate;
     unsigned int lengthInSeconds;
+    std::string outFileName = "";
 
 
     options_description cmdline_options{"Motion Options"};
@@ -258,21 +258,21 @@ public:
 
         // Record
 
-        if (vm.count("record"))
+        if (vm.count("record")){
             record = true;
+            outFileName = vm["record"].as<std::string>();   
+        }
         else 
             record = false;
 
         if(vm.count("fps"))
             fps = vm["fps"].as<unsigned int>();
 
+        if(vm.count("bitrate"))
+            bitrate = vm["bitrate"].as<unsigned int>();
+
         if(vm.count("length"))
             lengthInSeconds = vm["length"].as<unsigned int>();
-
-        if (vm.count("perfect-loop"))
-            perfectLoop = true;
-        else 
-            perfectLoop = false;
 
 
         // WARNINGS
@@ -342,10 +342,10 @@ private:
             ("color-mode", value<std::string>()->default_value("basic"), "Choose which color mode: basic or angle");
 
         recording.add_options()
-            ("record", "If the program should record")
+            ("record", value<std::string>(), "If the program should record and the name of the output file")
             ("fps", value<unsigned int>()->default_value(30), "The number of frames per second when recording")
             ("length", value<unsigned int>()->default_value(10), "The length of the recording in seconds")
-            ("perfect-loop", "if the recording should create perfect loops");
+            ("bitrate", value<unsigned int>()->default_value(8000000),"The bitrate with which to encode the video");
         
         cmdline_options.add(generic).add(simulation).add(recording);
 
