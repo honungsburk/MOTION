@@ -5,9 +5,21 @@
 #include <stdlib.h>
 
 /**
- * Reads Pixels from the GPU in a slightly faster way using Pixel Buffer Objects.
- */
+    CS-11 Asn 2: Read pixels from the GPU back to the CPU
+    @file GPUPixelReader.hpp
+    @author Frank Hampus Weslien
+*/
 class GPUPixelReader{
+    int frameNbr;
+    unsigned int nbrPBOs;
+    unsigned int index = 0;
+    unsigned int nextIndex;
+    GLuint * pixelbuffers;
+    unsigned int width;
+    unsigned int height;
+    GLenum format;
+
+
 public:
 
     GPUPixelReader(unsigned int nbrPBOs, unsigned int width, unsigned int height, GLenum format, unsigned int nbytes){
@@ -28,13 +40,18 @@ public:
     }
 
     ~GPUPixelReader() {
+        glDeleteBuffers(nbrPBOs, pixelbuffers);
         delete pixelbuffers;
-        //Should deallocate a bunch of resources???
     }
 
     /**
-     * 
-     */
+        Reads pixels from the GPU.
+        @param pixels the variable to which will be populated with a pointer  
+        pointing to the pixels returned from the GPU. It will not be assigned such
+        a pointer until the return value is non-negative.
+        @return the current frame of pixels that "pixels" will point to, it is
+        negative until all internal buffer objects are filled
+    */
     int readPixels(GLubyte *& pixels){
     
         index = (index + 1) % nbrPBOs;
@@ -43,7 +60,6 @@ public:
 
         loadPBO(format, index, width, height);
         if(frameNbr >= 0){
-            // map the PBO to process its data by CPU
             GLuint buf = pixelbuffers[nextIndex];
             glBindBuffer(GL_PIXEL_PACK_BUFFER, buf);
             pixels = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
@@ -60,14 +76,6 @@ public:
     }
 
 private:
-    int frameNbr;
-    unsigned int nbrPBOs;
-    unsigned int index = 0;
-    unsigned int nextIndex;
-    GLuint * pixelbuffers;
-    unsigned int width;
-    unsigned int height;
-    GLenum format;
 
     void loadPBO(GLenum format, unsigned int index, unsigned int width, unsigned int height){
         // set the target framebuffer to read
