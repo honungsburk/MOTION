@@ -40,6 +40,23 @@ VectorField createVectorField(int vectorWidthGrid, int vectorHeightGrid, std::fu
 ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vectorField);
 void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField);
 
+void renderFrame( GLFWwindow*  window
+                , unsigned int frameNbr
+                , Shader particleComputeShader
+                , GLuint PARTICLE_VAO
+                , GLuint PARTICLE_VBO // Necessary???
+                , GLuint particleFBO
+                , Shader particleShader
+                , GLuint particleTexture
+                , GLuint inTexture
+                , GLuint outTexture
+                , Shader postprocessingTrailShader
+                , GLuint backgroundFBOs[]
+                , GLuint backgroundTextures[]
+                , Shader postprocessingShader
+                , GLuint POST_PROCESSING_VAO
+                );
+
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
@@ -134,22 +151,7 @@ int main(int argc, char **argv)
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    void renderFrame( GLFWwindow*  window
-                    , unsigned int frameNbr
-                    , Shader particleComputeShader
-                    , GLuint PARTICLE_VAO
-                    , GLuint PARTICLE_VBO // Necessary???
-                    , GLuint particleFBO
-                    , Shader particleShader
-                    , GLuint particleTexture
-                    , GLuint inTexture
-                    , GLuint outTexture
-                    , Shader postprocessingTrailShader
-                    , GLuint backgroundFBOs[]
-                    , GLuint backgroundTextures[]
-                    , Shader postprocessingShader
-                    , GLuint POST_PROCESSING_VAO
-                    );
+
 
     // Set model
     // ------------------------------------
