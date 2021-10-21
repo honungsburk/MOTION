@@ -8,6 +8,7 @@
 #include "../include/glad/glad.h" 
 #include "finite_math.hpp"
 #include <stdexcept>
+#include "GPUPixelReader.hpp"
 extern "C" {
     #include <libavcodec/avcodec.h>
     #include <libswscale/swscale.h>
@@ -57,7 +58,12 @@ class VideoCapture
 {
 public:
 
-    VideoCapture(const char *filename, unsigned int width, unsigned int height, int framerate, unsigned int bitrate){
+    VideoCapture( const char *filename
+                , unsigned int width
+                , unsigned int height
+                , int framerate
+                , unsigned int bitrate
+                ): gpuPixelReader(3, width, height, GL_BGRA, width * height * 4){
 
         avformat_alloc_output_context2(&avFormatContext, NULL, NULL, filename);
         if (!avFormatContext) {
@@ -208,35 +214,63 @@ public:
             exit(1); // Wait... you should throw error instead!
         }
 
+
         size_t nvals = 4 * codec_ctx->width * codec_ctx->height; //GL_BGRA
         pixels = (GLubyte *) realloc(pixels, nvals * sizeof(GLubyte)); // I don't think I need to do this every time since the size is constant
-        glReadPixels(0, 0, codec_ctx->width, codec_ctx->height, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        int frameNbr = gpuPixelReader.readPixels(pixels);
 
-        // CONVERT TO YUV AND ENCODE
-        ret =  av_image_alloc(frame->data, frame->linesize, codec_ctx->width, codec_ctx->height, AV_PIX_FMT_YUV420P, 32);
-        if (ret < 0){
-            fprintf(stderr, "Could not allocate the image\n");
-            exit(1); // Wait... you should throw error instead!
+        if(frameNbr >= 0) {
+            // CONVERT TO YUV AND ENCODE
+            ret =  av_image_alloc(frame->data, frame->linesize, codec_ctx->width, codec_ctx->height, AV_PIX_FMT_YUV420P, 32);
+            if (ret < 0){
+                fprintf(stderr, "Could not allocate the image\n");
+                exit(1); // Wait... you should throw error instead!
+            }
+
+            // Compensate for OpenGL y-axis pointing upwards and ffmpeg y-axis pointing downwards        
+            uint8_t *in_data[1] = {(uint8_t *) pixels + (codec_ctx->height-1)*codec_ctx->width*4}; // address of the last line
+            int in_linesize[1] = {- codec_ctx->width * 4}; // negative stride
+
+            sws_scale(sws, in_data, in_linesize, 0, codec_ctx->height, frame->data, frame->linesize);
+
+            frame->pts = frameNbr;
+
+            /* encode the image */
+            write_frame(avFormatContext, codec_ctx, avStream, frame, pkt);
         }
 
-        // Compensate for OpenGL y-axis pointing upwards and ffmpeg y-axis pointing downwards        
-        uint8_t *in_data[1] = {(uint8_t *) pixels + (codec_ctx->height-1)*codec_ctx->width*4}; // address of the last line
-        int in_linesize[1] = {- codec_ctx->width * 4}; // negative stride
+        // size_t nvals = 4 * codec_ctx->width * codec_ctx->height; //GL_BGRA
+        // pixels = (GLubyte *) realloc(pixels, nvals * sizeof(GLubyte)); // I don't think I need to do this every time since the size is constant
+        
+        
+        // glReadPixels(0, 0, codec_ctx->width, codec_ctx->height, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
 
-        sws_scale(sws, in_data, in_linesize, 0, codec_ctx->height, frame->data, frame->linesize);
+        // // CONVERT TO YUV AND ENCODE
+        // ret =  av_image_alloc(frame->data, frame->linesize, codec_ctx->width, codec_ctx->height, AV_PIX_FMT_YUV420P, 32);
+        // if (ret < 0){
+        //     fprintf(stderr, "Could not allocate the image\n");
+        //     exit(1); // Wait... you should throw error instead!
+        // }
 
-        frame->pts = frame_order;
-        frame_order++;
+        // // Compensate for OpenGL y-axis pointing upwards and ffmpeg y-axis pointing downwards        
+        // uint8_t *in_data[1] = {(uint8_t *) pixels + (codec_ctx->height-1)*codec_ctx->width*4}; // address of the last line
+        // int in_linesize[1] = {- codec_ctx->width * 4}; // negative stride
 
-        /* encode the image */
-        write_frame(avFormatContext, codec_ctx, avStream, frame, pkt);
+        // sws_scale(sws, in_data, in_linesize, 0, codec_ctx->height, frame->data, frame->linesize);
+
+        // frame->pts = frame_order;
+        // frame_order++;
+
+        // /* encode the image */
+        // write_frame(avFormatContext, codec_ctx, avStream, frame, pkt);
     }
-
-
-
 
     void close()
     {
+        for(int i = 0; i < gpuPixelReader.getNbrPBOs(); i++){
+            addFrame();
+        }
+
         write_frame(avFormatContext, codec_ctx, avStream, NULL, pkt);
 
         av_write_trailer(avFormatContext);
@@ -253,6 +287,9 @@ public:
     }
 
 private:
+
+    GPUPixelReader gpuPixelReader;
+
 
     AVOutputFormat *avOutputFormat;
     AVFormatContext* avFormatContext = NULL;
