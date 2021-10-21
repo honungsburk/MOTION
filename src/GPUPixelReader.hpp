@@ -71,6 +71,10 @@ public:
         return frameNbr;
     }
 
+    /**
+        Get the number of internal buffers.
+        @return the number of internal buffers set by nbrPBOs at initialization.
+    */
     unsigned int getNbrPBOs(){
         return nbrPBOs;
     }
