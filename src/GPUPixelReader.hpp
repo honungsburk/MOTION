@@ -29,12 +29,13 @@ public:
 
     ~GPUPixelReader() {
         delete pixelbuffers;
+        //Should deallocate a bunch of resources???
     }
 
     /**
      * 
      */
-    int readPixels(GLubyte *pixels){
+    int readPixels(GLubyte *& pixels){
     
         index = (index + 1) % nbrPBOs;
         nextIndex = (index + 1) % nbrPBOs;
@@ -43,7 +44,8 @@ public:
         loadPBO(format, index, width, height);
         if(frameNbr >= 0){
             // map the PBO to process its data by CPU
-            glBindBuffer(GL_PIXEL_PACK_BUFFER, pixelbuffers[nextIndex]);
+            GLuint buf = pixelbuffers[nextIndex];
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, buf);
             pixels = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
         }
 

@@ -698,6 +698,149 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
                 return std::make_tuple(a * new_x , a *  new_y  );
                 };
         break;
+    case 22 : return [](float x, float y, float width, float height) { 
+                float a = 0.01;
+                float twirl_size = 20.0;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float radial_exponent = 1.5;
+                float length = sqrt(clip_x*clip_x + clip_y*clip_y);
+                float radial_coeff = pow(length, radial_exponent);
+                float new_x =  -clip_y/(length + 0.01) + radial_coeff*atan(twirl_size*x);
+                float new_y =  clip_x/(length + 0.01) + radial_coeff*atan(twirl_size*y);
+                return std::make_tuple(a * new_x , a *  new_y  );
+                };
+        break;
+    case 23 : return [](float x, float y, float width, float height) { 
+                float a = 0.01;
+                float twirl_size = 40.0;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float radial_exponent = 1.5;
+                float length = sqrt(clip_x*clip_x + clip_y*clip_y);
+                float radial_coeff = pow(length, radial_exponent);
+                float new_x =  clip_y/(length + 0.01) + radial_coeff*sin(twirl_size*y);
+                float new_y =  -clip_x/(length + 0.01) + radial_coeff*sin(twirl_size*y);
+                return std::make_tuple(a * new_x , a *  new_y  );
+                };
+        break;
+    case 24 : return [](float x, float y, float width, float height) { 
+                    float a = 0.01;
+                    float clip_x = 2.0 * x / width - 1.0;
+                    float clip_y = 2.0 * y / height - 1.0;
+                    float f1 = sin(clip_x);
+                    float f2 = sin(2.0*clip_x);
+                    float f3 = sin(3.0*clip_x);
+                    float f4 = sin(4.0*clip_x);
+                    float f5 = sin(5.0*clip_x);
+                    float new_x = a * (f1 + 
+                        f2*clip_y/4.0 + 
+                        f3*clip_x/6.0 +
+                        f4*clip_x/8.0 +
+                        f5*clip_y/10.0);
+                    f1 = sin(clip_y);
+                    f2 = sin(2.0*clip_y);
+                    f3 = sin(3.0*clip_y);
+                    f4 = sin(4.0*clip_y);
+                    f5 = sin(5.0*clip_y);
+                    float new_y = a * (f1 + 
+                        f2*clip_y/4.0 + 
+                        f3*clip_x/6.0 +
+                        f4*clip_x/8.0 +
+                        f5*clip_y/10.0);
+
+                    return std::make_tuple(new_x , new_y  );
+                    };
+        break;
+    case 25 : return [](float x, float y, float width, float height) { 
+                    auto f = [](float x, float y){
+                        float f1 = sin(x);
+                        float f2 = sin(2.0*x);
+                        float f3 = sin(3.0*x);
+                        float f4 = sin(4.0*x);
+                        float f5 = sin(5.0*x);
+                        return (f1 + 
+                            f2*x/4.0 + 
+                            f3*y/6.0 +
+                            f4*x/8.0 +
+                            f5*y/10.0);
+                    };
+
+                    auto df = [f](float x, float y) {
+                        float h = 0.001;
+                        return (f(x+h, y)-f(x-h, y))/(2.0*h);
+                        };
+
+                    float a = 0.01;
+                    float clip_x = 2.0 * x / width - 1.0;
+                    float clip_y = 2.0 * y / height - 1.0;
+                    return std::make_tuple(a * df(clip_x, clip_y) , a * df(clip_y, clip_x));
+                    };
+        break;
+    case 26 : return [](float x, float y, float width, float height) { 
+                auto f = [](float x, float y){
+                    float f1 = sin(x);
+                    float f2 = cos(2.0*x);
+                    float f3 = sin(3.0*x);
+                    float f4 = cos(4.0*x);
+                    float f5 = sin(5.0*x);
+                    return (f1 + 
+                        f2*y/4.0 + 
+                        f3*x/6.0 +
+                        f4*x/8.0 +
+                        f5*y/10.0);
+                };
+
+                auto df = [f](float x, float y) {
+                    float h = 0.001;
+                    return (f(x+h, y)-f(x-h, y))/(2.0*h);
+                    };
+
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float twirl_size = 20.0;
+                float radial_exponent = 1.5;
+                float length = sqrt(clip_x*clip_x + clip_y*clip_y);
+                float radial_coeff = pow(length, radial_exponent);
+                float new_x =  df(clip_y, clip_x)/(length + 0.01) + radial_coeff*sin(twirl_size*y);
+                float new_y =  -df(clip_x, clip_y)/(length + 0.01) + radial_coeff*sin(twirl_size*x);
+
+                return std::make_tuple(a * new_x , a * new_y);
+                };
+        break;
+    case 27 : return [](float x, float y, float width, float height) { 
+                auto f = [](float x, float y){
+                    float f1 = sin(x);
+                    float f2 = cos(2.0*x);
+                    float f3 = sin(3.0*x);
+                    float f4 = cos(4.0*x);
+                    float f5 = sin(5.0*x);
+                    return (f1 + 
+                        f2*y/4.0 + 
+                        f3*x/6.0 +
+                        f4*x/8.0 +
+                        f5*y/10.0);
+                };
+
+                auto df = [f](float x, float y) {
+                    float h = 0.001;
+                    return (f(x+h, y)-f(x-h, y))/(2.0*h);
+                    };
+
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float twirl_size = 20.0;
+                float radial_exponent = 1.5;
+                float length = sqrt(clip_x*clip_x + clip_y*clip_y);
+                float radial_coeff = pow(length, radial_exponent);
+                float new_x =  -df(clip_y, clip_x) + radial_coeff*sin(twirl_size*y);
+                float new_y =  -df(clip_x, clip_y) + radial_coeff*sin(twirl_size*x);
+
+                return std::make_tuple(a * new_x , a * new_y);
+                };
+        break;
 
     }
 
