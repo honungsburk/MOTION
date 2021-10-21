@@ -59,10 +59,6 @@ public:
 
 
     // Record Info
-    std::string record_folder = "../images/";
-    std::string record_to_file = "../motion.mp4";
-    std::string codec_name = "265/HVEC";
-
     unsigned int fps;
     bool record;
     unsigned int bitrate;
@@ -93,6 +89,10 @@ public:
         }
 
         notify(vm);
+
+
+        // Generic
+        // ----------------------------------------------------------------------------------------
         
         if (vm.count("help"))
             show_help = true;
@@ -104,7 +104,9 @@ public:
         else 
             show_version = false;
 
-        
+        // Resolution
+        // ----------------------------------------------------------------------------------------
+
         if (vm.count("width-ratio"))
             width_ratio = vm["width-ratio"].as<unsigned int>();
         
@@ -114,10 +116,11 @@ public:
         if (vm.count("pixels-per-ratio"))
             pixels_per_ratio = vm["pixels-per-ratio"].as<unsigned int>();
 
+        // Simulation
+        // ----------------------------------------------------------------------------------------
+
         if (vm.count("vectors-per-ratio"))
             vectors_per_ratio = vm["vectors-per-ratio"].as<unsigned int>();
-
-
         
         if (vm.count("point-size"))
             point_size = vm["point-size"].as<float>();
@@ -128,24 +131,13 @@ public:
         if (vm.count("nbr-compute-groups"))
             nbr_compute_groups = vm["nbr-compute-groups"].as<unsigned int>();
 
-        if (vm.count("particle-color"))
-            particle_color = fromHexColor(vm["particle-color"].as<std::string>());
-
-        if (vm.count("background-color"))
-            background_color = fromHexColor(vm["background-color"].as<std::string>());
-
-        if (vm.count("background-alpha")){
-            background_color.w = vm["background-alpha"].as<float>();
-        }
 
         if(vm.count("vector-field-function"))
             vector_field_function = vm["vector-field-function"].as<unsigned int>();
 
         if(vm.count("probability-to-die"))
             probability_to_die = vm["probability-to-die"].as<float>();     
-
-        if(vm.count("trail-mix-rate"))
-            trail_mix_rate = vm["trail-mix-rate"].as<float>();         
+     
         
         if(vm.count("speed"))
             speed = vm["speed"].as<float>();    
@@ -166,6 +158,15 @@ public:
             }
         }
 
+        // Trail
+        // ----------------------------------------------------------------------------------------
+
+        if(vm.count("trail-mix-rate"))
+            trail_mix_rate = vm["trail-mix-rate"].as<float>();    
+
+        // Color
+        // ----------------------------------------------------------------------------------------
+
         if (vm.count("color-mode")){
             std::string color_mode = vm["color-mode"].as<std::string>();
             if(color_mode == "basic") {
@@ -185,6 +186,16 @@ public:
                 failed = true;
             }
         }
+
+        if (vm.count("particle-color"))
+            particle_color = fromHexColor(vm["particle-color"].as<std::string>());
+
+        if (vm.count("background-color"))
+            background_color = fromHexColor(vm["background-color"].as<std::string>());
+
+        if (vm.count("background-alpha"))
+            background_color.w = vm["background-alpha"].as<float>();
+
 
         if(vm.count("cos-angle-offset")){
             std::vector<float> cosAngleOffset = vm["cos-angle-offset"].as<std::vector<float>>();
@@ -257,6 +268,7 @@ public:
 
 
         // Record
+        // ----------------------------------------------------------------------------------------
 
         if (vm.count("record")){
             record = true;
@@ -312,6 +324,7 @@ private:
         options_description generic{"Generic"};
         options_description simulation{"Simulate"};
         options_description recording{"Record"};
+        options_description color{"Color"};
 
         generic.add_options()
             ("help", "Help screen")
@@ -327,19 +340,21 @@ private:
             ("point-size", value<float>()->default_value(2.0f), "The pixel size of the particles")
             ("nbr-particles", value<unsigned int>()->default_value(1024), "The number of particles in the simulation")
             ("nbr-compute-groups", value<unsigned int>()->default_value(1024), "The number of compute groups issues to the graphics card")
-            ("particle-color", value<std::string>()->default_value("ffffff"), "Particle Color as 'ffffff'")
-            ("background-color", value<std::string>()->default_value("000000"), "Background Color as '000000'")
-            ("background-alpha", value<float>()->default_value(1.0), "Background alpha value between 0.0-1.0")
             ("vector-field-function", value<unsigned int>()->default_value(0), "Which function to use when creating the vector field")
             ("interpolation-mode", value<std::string>()->default_value("smooth"), "Which interpolation mode to use")
             ("probability-to-die", value<float>()->default_value(0.01f), "The probability for a particle to die")
-            ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background")
+            ("trail-mix-rate", value<float>()->default_value(0.9f), "The rate by which the particle trail is mixed into the background");
+            
+        color.add_options()
+            ("color-mode", value<std::string>()->default_value("basic"), "Choose which color mode: basic or angle")
+            ("particle-color", value<std::string>()->default_value("ffffff"), "Particle Color as 'ffffff'")
+            ("background-color", value<std::string>()->default_value("000000"), "Background Color as '000000'")
+            ("background-alpha", value<float>()->default_value(1.0), "Background alpha value between 0.0-1.0")
             ("cos-color-base", value<std::vector<float>>()->multitoken(), "The base which we oscillate around")
             ("cos-color-amplitude", value<std::vector<float>>()->multitoken(), "The amplitude of the cos color component ")
             ("cos-color-speed", value<std::vector<float>>()->multitoken(), "The speed of change for the red, green, and blue components when using cos coloring")
             ("cos-color-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring")
-            ("cos-angle-offset", value<std::vector<float>>()->multitoken(), "The angle/position the angle is computed against")
-            ("color-mode", value<std::string>()->default_value("basic"), "Choose which color mode: basic or angle");
+            ("cos-angle-offset", value<std::vector<float>>()->multitoken(), "The angle/position the angle is computed against");
 
         recording.add_options()
             ("record", value<std::string>(), "If the program should record and the name of the output file")
@@ -347,10 +362,10 @@ private:
             ("length", value<unsigned int>()->default_value(10), "The length of the recording in seconds")
             ("bitrate", value<unsigned int>()->default_value(8000000),"The bitrate with which to encode the video");
         
-        cmdline_options.add(generic).add(simulation).add(recording);
+        cmdline_options.add(generic).add(simulation).add(color).add(recording);
 
         
-        config_file_options.add(simulation).add(recording);
+        config_file_options.add(simulation).add(color).add(recording);
     }
 
 
