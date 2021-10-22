@@ -201,7 +201,7 @@ public:
     /**
      * Write the current frame in OpenGl to the video stream
      */
-    void addFrame(){
+    void recordFrame(){
         fflush(stdout);
 
         /* Make sure the frame data is writable.
@@ -248,7 +248,7 @@ public:
         // Since the gpuPixelReader is always a few frames behind we have to flush
         // make sure that we get all the frames
         for(int i = 0; i < gpuPixelReader.getNbrPBOs(); i++){
-            addFrame();
+            recordFrame();
         }
 
         write_frame(avFormatContext, codec_ctx, avStream, NULL, pkt);

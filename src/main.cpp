@@ -108,8 +108,6 @@ int main(int argc, char **argv)
         return -1;
     }
     glfwMakeContextCurrent(window);
-    
-    //std::cout << glGetError() << std::endl; // returns 0 (no error)
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
@@ -119,7 +117,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    // configure global opengl state
+    // configure global OpenGL state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE); // enabled by default on some drivers, but not all so always enable to make sure
@@ -151,14 +149,6 @@ int main(int argc, char **argv)
     ParticleSystem pSystem = initParticleSystem(&particleComputeShader, &vectorField);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-
-
-    // Set model
-    // ------------------------------------
-    particleShader.use();
-    glm::mat4 model = glm::mat4(1.0f);
-    particleShader.setMat4("model", model);
 
     // Particles
     // ------------------------------------
@@ -301,6 +291,8 @@ int main(int argc, char **argv)
     // --------------------
 
 
+    // Particle Compute Shader
+    // ------------------------------------
     particleComputeShader.use();
     particleComputeShader.setBool("u_loop", false);
     particleComputeShader.setInt("u_fps", cmdOptions.fps);
@@ -314,31 +306,35 @@ int main(int argc, char **argv)
     particleComputeShader.setVec2f("u_angle_vector", cmdOptions.cosColorAnglePos);
     particleComputeShader.setFloat("u_speed", cmdOptions.speed);
 
+    // Particle Shader
+    // ------------------------------------
+    particleShader.use();
+    glm::mat4 model = glm::mat4(1.0f);
+    particleShader.setMat4("model", model);
+
+    // Post-processing Trail Shader
+    // ------------------------------------
     postprocessingTrailShader.use();
     postprocessingTrailShader.setBool("u_loop_record_mode", cmdOptions.record && false);
+    postprocessingTrailShader.setFloat("u_trail_mix", cmdOptions.trail_mix_rate);
     postprocessingTrailShader.setVec4f( "u_clearColor"
                                       , cmdOptions.background_color.x
                                       , cmdOptions.background_color.y
                                       , cmdOptions.background_color.z
                                       , cmdOptions.background_color.w
                                       );
-    postprocessingTrailShader.setFloat("u_trail_mix", cmdOptions.trail_mix_rate);
 
 
     // Loop Variables
     // -----------
     int numberOfFramesToRecord = cmdOptions.fps * cmdOptions.lengthInSeconds;    
-    bool exit = false;
-    //Used to pingpong between FBO:s
     unsigned int pingPongFBOIndex = 0;
-
-
     unsigned int frameNbr = 0;
 
     // render loop
     // -----------
     if (!cmdOptions.record){
-        while (!glfwWindowShouldClose(window) && !exit )
+        while (!glfwWindowShouldClose(window) && numberOfFramesToRecord != frameNbr )
         {
             unsigned int inTexture = pingPongFBOIndex;
             unsigned int outTexture = (pingPongFBOIndex + 1) % 2;
@@ -371,7 +367,7 @@ int main(int argc, char **argv)
                         , cmdOptions.fps
                         , cmdOptions.bitrate
                         );
-        while (!glfwWindowShouldClose(window) && !exit )
+        while (!glfwWindowShouldClose(window) && numberOfFramesToRecord != frameNbr )
         {
             unsigned int inTexture = pingPongFBOIndex;
             unsigned int outTexture = (pingPongFBOIndex + 1) % 2;
@@ -397,13 +393,9 @@ int main(int argc, char **argv)
 
             frameNbr += 1;
 
-            // Save Image
+            // Record Frame
             //---------------------------------------------------------
-            videoCapture.addFrame();
-
-            if(numberOfFramesToRecord == frameNbr ){
-                exit = true;
-            }
+            videoCapture.recordFrame();
         }
 
         videoCapture.close();

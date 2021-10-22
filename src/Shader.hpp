@@ -16,6 +16,9 @@
     CS-11 Asn 2: Create OpenGL shader program from source code.
     @file Shader.hpp
     @author Frank Hampus Weslien
+
+    NOTE: The object can not be copied since at destruction it will remove the
+    destroy the OpenGL program it manages.
 */
 class Shader : private boost::noncopyable
 {
@@ -70,8 +73,8 @@ public:
         glDeleteShader(compute);
     }
 
-    ~Shader(){
-        glDeleteProgram(ID);
+    void deleteProgram(){
+            glDeleteProgram(ID);
     }
 
     /**
