@@ -334,7 +334,7 @@ int main(int argc, char **argv)
     // render loop
     // -----------
     if (!cmdOptions.record){
-        while (!glfwWindowShouldClose(window) && numberOfFramesToRecord != frameNbr )
+        while (!glfwWindowShouldClose(window))
         {
             unsigned int inTexture = pingPongFBOIndex;
             unsigned int outTexture = (pingPongFBOIndex + 1) % 2;
@@ -830,6 +830,18 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
                 float radial_coeff = pow(length, radial_exponent);
                 float new_x =  -df(clip_y, clip_x) + radial_coeff*sin(twirl_size*y);
                 float new_y =  -df(clip_x, clip_y) + radial_coeff*sin(twirl_size*x);
+
+                return std::make_tuple(a * new_x , a * new_y);
+                };
+        break;
+    case 28 : return [](float x, float y, float width, float height) { 
+
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+
+                float new_x = cos(clip_x) * sin(clip_y);
+                float new_y = tanh(clip_y);
 
                 return std::make_tuple(a * new_x , a * new_y);
                 };
