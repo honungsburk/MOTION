@@ -61,9 +61,13 @@ public:
     // Record Info
     unsigned int fps;
     bool record;
-    unsigned int bitrate;
     unsigned int lengthInSeconds;
+    unsigned int delayInSeconds;
     std::string outFileName = "";
+    unsigned int bitrate;
+    unsigned int crf;
+    std::string preset = "";
+    std::string tune = "";
 
 
     options_description cmdline_options{"Motion Options"};
@@ -290,6 +294,65 @@ public:
         if(vm.count("length"))
             lengthInSeconds = vm["length"].as<unsigned int>();
 
+        if(vm.count("delay"))
+            delayInSeconds = vm["delay"].as<unsigned int>();
+
+        if(vm.count("crf")){
+            unsigned int tmpCRF = vm["crf"].as<unsigned int>();
+            if(tmpCRF >= 0 && tmpCRF <= 51){
+                crf = tmpCRF;
+            } else {
+                std::cout 
+                    << "WARNING: '--crf "
+                    << tmpCRF
+                    << "' must be a value in the range 0-51."
+                    << std::endl;
+                failed = true;
+            }
+        }
+
+        if(vm.count("preset")){
+            std::string tmpPreset = vm["preset"].as<std::string>();
+            if( tmpPreset == "ultrafast" 
+                || tmpPreset == "superfast" 
+                || tmpPreset == "veryfast" 
+                || tmpPreset == "faster" 
+                || tmpPreset == "fast" 
+                || tmpPreset == "medium" 
+                || tmpPreset == "slow" 
+                || tmpPreset == "slower" 
+                || tmpPreset == "veryslow"
+                ){
+                preset = tmpPreset;
+            } else {
+                std::cout 
+                    << "WARNING: '--preset "
+                    << tmpPreset
+                    << "' must be one of: 'ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow' , 'slower', or 'veryslow'"
+                    << std::endl;
+                failed = true;
+            }
+        }
+
+        if(vm.count("tune")){
+            std::string tmpTune = vm["tune"].as<std::string>();
+            if( tmpTune == "film" 
+                || tmpTune == "animation" 
+                || tmpTune == "grain" 
+                || tmpTune == "stillimage" 
+                || tmpTune == "fastdecode" 
+                || tmpTune == "zerolatency" 
+                ){
+                tune = tmpTune;
+            } else {
+                std::cout 
+                    << "WARNING: '--tune "
+                    << tmpTune
+                    << "' must be one of: 'film', 'animation', 'grain', 'stillimage', 'fastdecode', or 'zerolatency'"
+                    << std::endl;
+                failed = true;
+            }
+        }
 
         // WARNINGS
         // ----------------------------------------------------------------------------------------
@@ -361,11 +424,16 @@ private:
             ("cos-angle-offset", value<std::vector<float>>()->multitoken(), "The angle/position the angle is computed against");
 
         recording.add_options()
-            ("record", value<std::string>(), "If the program should record and the name of the output file")
+            ("record", value<std::string>(), "If the program should record and the name of the output file (Note that we are using HVEC encoding)")
             ("fps", value<unsigned int>()->default_value(30), "The number of frames per second when recording")
             ("length", value<unsigned int>()->default_value(10), "The length of the recording in seconds")
+            ("delay", value<unsigned int>()->default_value(0), "The number of seconds to delay before recording starts")
+            ("crf", value<unsigned int>()->default_value(28),"The CRF value: 0–51")
+            ("preset", value<std::string>()->default_value("slow"),"The ffmpeg preset: 'ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow' , 'slower', 'veryslow'")
+            ("tune", value<std::string>()->default_value("animation"),"The ffmpeg tune: 'film', 'animation', 'grain', 'stillimage', 'fastdecode', 'zerolatency'")
             ("bitrate", value<unsigned int>()->default_value(8000000),"The bitrate with which to encode the video");
-        
+
+
         cmdline_options.add(generic).add(simulation).add(color).add(recording);
 
         

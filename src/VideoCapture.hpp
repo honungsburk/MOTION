@@ -68,6 +68,9 @@ public:
                 , unsigned int height
                 , int framerate
                 , unsigned int bitrate
+                , unsigned int crf
+                , std::string preset
+                , std::string tune
                 ): gpuPixelReader(3, width, height, GL_BGRA, width * height * 4){
 
         avformat_alloc_output_context2(&avFormatContext, NULL, NULL, filename);
@@ -83,7 +86,7 @@ public:
         // Video Stream
 
         /* find the encoder */
-        AVCodecID codec_id = AV_CODEC_ID_H264;
+        AVCodecID codec_id = AV_CODEC_ID_HEVC;
         codec = avcodec_find_encoder(codec_id);
         if (!codec) {
             char buffer[50];
@@ -138,9 +141,15 @@ public:
         codec_ctx->gop_size      = 10; /* emit one intra frame every twelve frames at most */
         codec_ctx->pix_fmt       = AV_PIX_FMT_YUV420P;
 
+        av_dict_set_int(&avDict, "crf", crf, 0);
+        av_dict_set(&avDict, "preset", preset.c_str(), 0);
+        av_dict_set(&avDict, "tune", tune.c_str(), 0);
+
         /* Some formats want stream headers to be separate. */
         if (avOutputFormat->flags & AVFMT_GLOBALHEADER)
             codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+
 
         /* open the codec */
         AVDictionary *opt = NULL;
@@ -152,6 +161,7 @@ public:
             sprintf(buffer, "Could not open video codec: %s\n", av_err2str(ret));
             throw std::invalid_argument(buffer);
         }
+        av_opt_set(codec_ctx->priv_data, "tune", "zerolatency", 0);
 
         frame = alloc_frame(codec_ctx->pix_fmt, codec_ctx->width, codec_ctx->height);
         if (!frame)

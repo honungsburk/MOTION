@@ -327,7 +327,8 @@ int main(int argc, char **argv)
 
     // Loop Variables
     // -----------
-    int numberOfFramesToRecord = cmdOptions.fps * cmdOptions.lengthInSeconds;    
+    unsigned int numberOfFramesToRecord = cmdOptions.fps * cmdOptions.lengthInSeconds;   
+    unsigned int numberOfFramesToDelay =  cmdOptions.fps * cmdOptions.delayInSeconds;   
     unsigned int pingPongFBOIndex = 0;
     unsigned int frameNbr = 0;
 
@@ -366,8 +367,11 @@ int main(int argc, char **argv)
                         , cmdOptions.height()
                         , cmdOptions.fps
                         , cmdOptions.bitrate
+                        , cmdOptions.crf 
+                        , cmdOptions.preset 
+                        , cmdOptions.tune
                         );
-        while (!glfwWindowShouldClose(window) && numberOfFramesToRecord != frameNbr )
+        while (!glfwWindowShouldClose(window) && numberOfFramesToRecord + numberOfFramesToDelay != frameNbr )
         {
             unsigned int inTexture = pingPongFBOIndex;
             unsigned int outTexture = (pingPongFBOIndex + 1) % 2;
@@ -395,7 +399,9 @@ int main(int argc, char **argv)
 
             // Record Frame
             //---------------------------------------------------------
-            videoCapture.recordFrame();
+            if(numberOfFramesToDelay < frameNbr){
+                videoCapture.recordFrame();
+            }
         }
 
         videoCapture.close();
