@@ -30,30 +30,30 @@ struct VectorField {
 };
 
 struct ParticleSystem { 
-    Shader shader;
-    VectorField vectorField;
+    Shader * shader;
+    VectorField * vectorField;
     unsigned int ssbo;
-} pSystem;
+};
 
 std::function<std::tuple<float, float>(float, float, float, float)> createVectorFieldFn(unsigned int functionNbr);
 VectorField createVectorField(int vectorWidthGrid, int vectorHeightGrid, std::function<std::tuple<float, float>(float, float, float, float)> f);
-ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vectorField);
-void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField);
+ParticleSystem initParticleSystem(Shader * particleComputeShader, VectorField *vectorField);
+void updateParticleSystem(ParticleSystem *particleSystem, VectorField *vectorField);
 
 void renderFrame( GLFWwindow*  window
                 , unsigned int frameNbr
-                , Shader particleComputeShader
+                , Shader *particleComputeShader
                 , GLuint PARTICLE_VAO
                 , GLuint PARTICLE_VBO // Necessary???
                 , GLuint particleFBO
-                , Shader particleShader
+                , Shader *particleShader
                 , GLuint particleTexture
                 , GLuint inTexture
                 , GLuint outTexture
-                , Shader postprocessingTrailShader
+                , Shader *postprocessingTrailShader
                 , GLuint backgroundFBOs[]
                 , GLuint backgroundTextures[]
-                , Shader postprocessingShader
+                , Shader *postprocessingShader
                 , GLuint POST_PROCESSING_VAO
                 );
 
@@ -147,7 +147,8 @@ int main(int argc, char **argv)
 
     VectorField vectorField = createVectorField(cmdOptions.vectorGridWidth(), cmdOptions.vectorGridHeight(), vectorFieldFn);
 
-    pSystem = initParticleSystem(particleComputeShader, vectorField);
+    // It probably copies the shader here...
+    ParticleSystem pSystem = initParticleSystem(&particleComputeShader, &vectorField);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
@@ -344,18 +345,18 @@ int main(int argc, char **argv)
 
             renderFrame( window
                     , frameNbr 
-                    , particleComputeShader 
+                    , &particleComputeShader 
                     , PARTICLE_VAO 
                     , PARTICLE_VBO 
                     , particleFBO
-                    , particleShader
+                    , &particleShader
                     , particleTexture
                     , inTexture
                     , outTexture
-                    , postprocessingTrailShader
+                    , &postprocessingTrailShader
                     , backgroundFBOs
                     , backgroundTextures
-                    , postprocessingShader
+                    , &postprocessingShader
                     , POST_PROCESSING_VAO
             );
 
@@ -377,18 +378,18 @@ int main(int argc, char **argv)
 
             renderFrame( window
                     , frameNbr 
-                    , particleComputeShader 
+                    , &particleComputeShader 
                     , PARTICLE_VAO 
                     , PARTICLE_VBO 
                     , particleFBO
-                    , particleShader
+                    , &particleShader
                     , particleTexture
                     , inTexture
                     , outTexture
-                    , postprocessingTrailShader
+                    , &postprocessingTrailShader
                     , backgroundFBOs
                     , backgroundTextures
-                    , postprocessingShader
+                    , &postprocessingShader
                     , POST_PROCESSING_VAO
             );
 
@@ -421,18 +422,18 @@ int main(int argc, char **argv)
 
 void renderFrame( GLFWwindow*  window
                 , unsigned int frameNbr
-                , Shader particleComputeShader
+                , Shader * particleComputeShader
                 , GLuint PARTICLE_VAO
                 , GLuint PARTICLE_VBO // Necessary???
                 , GLuint particleFBO
-                , Shader particleShader
+                , Shader *particleShader
                 , GLuint particleTexture
                 , GLuint inTexture
                 , GLuint outTexture
-                , Shader postprocessingTrailShader
+                , Shader * postprocessingTrailShader
                 , GLuint backgroundFBOs[]
                 , GLuint backgroundTextures[]
-                , Shader postprocessingShader
+                , Shader *postprocessingShader
                 , GLuint POST_PROCESSING_VAO
                 ){
         // per-frame time logic
@@ -447,9 +448,9 @@ void renderFrame( GLFWwindow*  window
 
         // Update Particle Positions
         // ------
-        particleComputeShader.use();
-        particleComputeShader.setFloat("u_time", currentFrame);
-        particleComputeShader.setInt("u_loop_iteration", frameNbr); // TODO: REMOVE THIS!
+        particleComputeShader->use();
+        particleComputeShader->setFloat("u_time", currentFrame);
+        particleComputeShader->setInt("u_loop_iteration", frameNbr); // TODO: REMOVE THIS!
 
 
         glBindVertexArray(PARTICLE_VAO);
@@ -472,7 +473,7 @@ void renderFrame( GLFWwindow*  window
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
 
-        particleShader.use();
+        particleShader->use();
         glBindVertexArray(PARTICLE_VAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, particleTexture);
@@ -486,11 +487,11 @@ void renderFrame( GLFWwindow*  window
         // ------
 
         glBindFramebuffer(GL_FRAMEBUFFER, backgroundFBOs[outTexture]);
-        postprocessingTrailShader.use();
+        postprocessingTrailShader->use();
 
-        postprocessingTrailShader.setInt("screenTexture", 0);
-        postprocessingTrailShader.setInt("trailTexture", 1);
-        postprocessingTrailShader.setBool("u_first_frame", frameNbr == 0);
+        postprocessingTrailShader->setInt("screenTexture", 0);
+        postprocessingTrailShader->setInt("trailTexture", 1);
+        postprocessingTrailShader->setBool("u_first_frame", frameNbr == 0);
         
 
         glActiveTexture(GL_TEXTURE0);
@@ -516,8 +517,8 @@ void renderFrame( GLFWwindow*  window
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
 
-        postprocessingShader.use();
-        postprocessingShader.setInt("screenTexture", 0);
+        postprocessingShader->use();
+        postprocessingShader->setInt("screenTexture", 0);
         glBindVertexArray(POST_PROCESSING_VAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, backgroundFBOs[outTexture]);
@@ -870,12 +871,12 @@ VectorField createVectorField(int vectorWidthGrid, int vectorHeightGrid, std::fu
     return VectorField { vectorFieldData, vectorWidthGrid, vectorHeightGrid };
 }
 
-ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vectorField){
-    particleComputeShader.use();
+ParticleSystem initParticleSystem(Shader *particleComputeShader, VectorField *vectorField){
+    particleComputeShader->use();
     glCheckError(); 
-    particleComputeShader.setInt("u_width", vectorField.width);
+    particleComputeShader->setInt("u_width", vectorField->width);
     glCheckError(); 
-    particleComputeShader.setInt("u_height", vectorField.height);
+    particleComputeShader->setInt("u_height", vectorField->height);
     glCheckError(); 
 
     GLuint ssbo;
@@ -883,7 +884,7 @@ ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vect
     glCheckError(); 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
     glCheckError(); 
-    glBufferData(GL_SHADER_STORAGE_BUFFER, vectorField.data.size() * 4, vectorField.data.data(), GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, vectorField->data.size() * 4, vectorField->data.data(), GL_STATIC_DRAW);
     glCheckError(); 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbo);
     glCheckError(); 
@@ -894,24 +895,24 @@ ParticleSystem initParticleSystem(Shader particleComputeShader, VectorField vect
 
 }
 
-void updateParticleSystem(ParticleSystem particleSystem, VectorField vectorField){
-    particleSystem.shader.use();
+void updateParticleSystem(ParticleSystem *particleSystem, VectorField * vectorField){
+    particleSystem->shader->use();
     glCheckError(); 
-    particleSystem.shader.setInt("u_width", vectorField.width);
+    particleSystem->shader->setInt("u_width", vectorField->width);
     glCheckError(); 
-    particleSystem.shader.setInt("u_height", vectorField.height);
+    particleSystem->shader->setInt("u_height", vectorField->height);
     glCheckError(); 
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleSystem.ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleSystem->ssbo);
     glCheckError(); 
-    glBufferData(GL_SHADER_STORAGE_BUFFER, vectorField.data.size() * 4, vectorField.data.data(), GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, vectorField->data.size() * 4, vectorField->data.data(), GL_STATIC_DRAW);
     glCheckError(); 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleSystem.ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleSystem->ssbo);
     glCheckError(); 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
     glCheckError(); 
 
-    particleSystem.vectorField = vectorField;
+    particleSystem->vectorField = vectorField;
 }
 
 glm::vec4 fromHexColor(std::string hexColor){
@@ -942,11 +943,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // cmdOptions.width = width;
     // cmdOptions.height = height;
 
-    std::function<std::tuple<float, float>(float, float, float, float)> vectorFieldFn = createVectorFieldFn(cmdOptions.vector_field_function); 
+    // std::function<std::tuple<float, float>(float, float, float, float)> vectorFieldFn = createVectorFieldFn(cmdOptions.vector_field_function); 
 
-    VectorField vectorField = createVectorField(cmdOptions.vectorGridWidth(), cmdOptions.vectorGridHeight(), vectorFieldFn);
+    // VectorField vectorField = createVectorField(cmdOptions.vectorGridWidth(), cmdOptions.vectorGridHeight(), vectorFieldFn);
 
-    updateParticleSystem(pSystem, vectorField);
+    // updateParticleSystem(pSystem, vectorField);
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, cmdOptions.width(), cmdOptions.height());

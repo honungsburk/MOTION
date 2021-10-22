@@ -10,13 +10,14 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <boost/noncopyable.hpp>
 
 /**
     CS-11 Asn 2: Create OpenGL shader program from source code.
     @file Shader.hpp
     @author Frank Hampus Weslien
 */
-class Shader
+class Shader : private boost::noncopyable
 {
     unsigned int ID;
 public:
@@ -67,11 +68,6 @@ public:
         glLinkProgram(ID);
         checkCompileErrors(ID, "PROGRAM");
         glDeleteShader(compute);
-    }
-
-    //This is nonsense just to allow me to create dummy shaders
-    Shader(){
-        ID = 19726387;
     }
 
     ~Shader(){
