@@ -6,3 +6,4 @@ audio/
 *.jpg
 *.jpeg
 live-encoding/
+*.patch
