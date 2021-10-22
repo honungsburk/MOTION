@@ -82,8 +82,6 @@ public:
 
         // Video Stream
 
-        /* find the mpeg1video encoder */
-
         /* find the encoder */
         AVCodecID codec_id = AV_CODEC_ID_H264;
         codec = avcodec_find_encoder(codec_id);
@@ -200,7 +198,9 @@ public:
     }
 
 
-
+    /**
+     * Write the current frame in OpenGl to the video stream
+     */
     void addFrame(){
         fflush(stdout);
 
@@ -245,6 +245,8 @@ public:
 
     void close()
     {
+        // Since the gpuPixelReader is always a few frames behind we have to flush
+        // make sure that we get all the frames
         for(int i = 0; i < gpuPixelReader.getNbrPBOs(); i++){
             addFrame();
         }
@@ -268,7 +270,6 @@ private:
 
     GPUPixelReader gpuPixelReader;
 
-
     AVOutputFormat *avOutputFormat;
     AVFormatContext* avFormatContext = NULL;
     AVStream* avStream;
@@ -283,15 +284,13 @@ private:
     AVFrame *frame;
     AVPacket *pkt;
    
-    //
-    int frame_order, ret;
+    // Return code from opengl functions, just to avoid having to declare it all the time
+    int ret;
 
 
     int write_frame(AVFormatContext *fmt_ctx, AVCodecContext *c,
                         AVStream *st, AVFrame *frame, AVPacket *pkt)
     {
-        int ret;
-
         // send the frame to the encoder
         ret = avcodec_send_frame(c, frame);
         if (ret < 0) {
@@ -342,7 +341,6 @@ private:
     AVFrame *alloc_frame(enum AVPixelFormat pix_fmt, int width, int height)
     {
         AVFrame *frame;
-        int ret;
 
         frame = av_frame_alloc();
         if (!frame)
