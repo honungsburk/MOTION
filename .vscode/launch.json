@@ -11,7 +11,6 @@
             "program": "${workspaceFolder}/build/bin/VectorFieldParticleSystem",
             "args": [
                 "--config", "../configs/config-1",
-                "--record", "../debug.mp4"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",

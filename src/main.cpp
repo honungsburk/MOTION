@@ -846,6 +846,91 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
                 return std::make_tuple(a * new_x , a * new_y);
                 };
         break;
+    case 29 : return [](float x, float y, float width, float height) { 
+
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+
+                float new_x = tanh(clip_x) * tanh(clip_y);
+                float new_y = -tanh(clip_y);
+
+                return std::make_tuple(a * new_x , a * new_y);
+                };
+        break;
+    case 30 : return [](float x, float y, float width, float height) { 
+
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float new_x = sin(tan(clip_x * M_PI / 2.12937678))*cos(tan(clip_y * M_PI / 2.12937678));
+                float new_y = sin(tan(clip_y * M_PI / 2.12937678))*cos(tan(clip_x * M_PI / 2.12937678));
+
+                return std::make_tuple(a * new_x , a * new_y);
+                };
+        break;
+    case 31 : return [](float x, float y, float width, float height) { 
+
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float new_x = sin(tan(clip_y * M_PI / 3.1976123))*cos(tan(clip_x * M_PI / 0.82734));
+                float new_y = sin(tan(clip_y * M_PI / 4.123871))*cos(tan(clip_x * M_PI / 2.7236));
+
+                return std::make_tuple(a * new_x , a * new_y);
+                };
+        break;
+    case 32 : return [](float x, float y, float width, float height) { 
+
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float p1_x = clip_x - 0.5;
+                float p1_y = clip_y;
+
+                float p2_x = clip_x + 0.5;
+                float p2_y = clip_y;
+
+                float p1_length = p1_x*p1_x + p1_y*p1_y;
+                float p2_length = p2_x*p2_x + p2_y*p2_y;
+
+                float new_x = -1.0 * (p1_y / p1_length + p2_y / p2_length);
+                float new_y = (p1_x / p1_length + p2_x / p2_length);
+
+                return std::make_tuple(a * new_x , a * new_y);
+                };
+        break;
+    case 33 : return [](float x, float y, float width, float height) { 
+
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+                float p1_x = clip_x - 0.5;
+                float p1_y = clip_y + 0.2;
+
+                float p2_x = clip_x + 0.5;
+                float p2_y = clip_y - 0.2;
+
+                float p1_length = p1_x*p1_x + p1_y*p1_y;
+                float p2_length = p2_x*p2_x + p2_y*p2_y;
+
+                float new_x = (p1_y / p1_length + p2_y / p2_length);
+                float new_y = -1.0 * (p1_x / p1_length + p2_x / p2_length);
+
+                return std::make_tuple(a * new_x , a * new_y);
+                };
+        break;
+    case 34 : return [](float x, float y, float width, float height) { 
+
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+
+                return std::make_tuple(a * clip_y * clip_y , a * clip_x * clip_x);
+                };
+        break;
+
+
 
     }
 
