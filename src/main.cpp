@@ -17,6 +17,7 @@
 #include "CmdOptions.hpp"
 #include "ImageSequencer.hpp"
 #include "VideoCapture.hpp"
+#include "VectorFieldFunctions.hpp"
 
 #include <random>
 
@@ -935,8 +936,69 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
                 return std::make_tuple(a * clip_y * clip_y , a * clip_x * clip_x);
                 };
         break;
+    case 35 : return [](float x, float y, float width, float height) { 
 
+                float twirl_size = 20.0;
+                float radial_exponent = 1.5;
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
 
+                float length = sqrt(clip_x*clip_x + clip_y*clip_y);
+                float radial_coeff = pow(length, radial_exponent);
+                float new_x = clip_y * clip_y + radial_coeff*sin(twirl_size*x);
+                float new_y = clip_x * clip_x + radial_coeff*sin(twirl_size*y);
+                return std::make_tuple(a * new_x, a * new_y);
+                };
+        break;
+    case 36 : return [](float x, float y, float width, float height) { 
+
+                float twirl_size = 20.0;
+                float radial_exponent = 1.5;
+                float a = 0.01;
+                float clip_x = 2.0 * x / width - 1.0;
+                float clip_y = 2.0 * y / height - 1.0;
+
+                float length = sqrt(clip_x*clip_x + clip_y*clip_y);
+                float radial_coeff = pow(length, radial_exponent);
+                float new_x = clip_y * clip_x + radial_coeff*sin(2.0 * twirl_size*x);
+                float new_y = clip_x * clip_y + radial_coeff*cos(2.0 * twirl_size*y);
+                return std::make_tuple(a * new_x, a * new_y);
+                };
+        break;
+    case 37 : return [](float x, float y, float width, float height) { 
+                float a = 0.01;
+                glm::vec3 df = sdgArc(toClipSpace(glm::vec2(x, y), width, height), glm::vec2(0.3, 0.3), 0.5, 0.5 );
+                glm::vec2 v = turnNinetyDegrees(glm::vec2(df.y, df.z));
+                if (df.x <= 0){
+                    v = glm::vec2(df.y, df.z);
+                }
+
+                return std::make_tuple(a * v.x, a * v.y);
+                };
+        break;
+    case 38 : return [](float x, float y, float width, float height) { 
+                float a = 0.01;
+                glm::vec3 df = sdgCross(toClipSpace(glm::vec2(x, y), width, height), glm::vec2(0.3, 0.3));
+                glm::vec2 v = turnNinetyDegrees(glm::vec2(df.y, df.z));
+                if (df.x <= 0){
+                    v = glm::vec2(df.y, df.z);
+                }
+
+                return std::make_tuple(a * v.x, a * v.y);
+                };
+        break;
+    case 39 : return [](float x, float y, float width, float height) { 
+                float a = 0.01;
+                glm::vec3 df = sdgCross(toClipSpace(glm::vec2(x, y), width, height), glm::vec2(0.8, 0.3));
+                glm::vec2 v = turnNinetyDegrees(glm::vec2(df.y, df.z));
+                if (df.x <= 0){
+                    v = glm::vec2(df.y, df.z);
+                }
+
+                return std::make_tuple(a * v.x, a * v.y);
+                };
+        break;
 
     }
 
