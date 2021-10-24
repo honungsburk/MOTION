@@ -999,6 +999,17 @@ std::function<std::tuple<float, float>(float, float, float, float)> createVector
                 return std::make_tuple(a * v.x, a * v.y);
                 };
         break;
+    case 40 : return [](float x, float y, float width, float height) { 
+                float a = 0.01;
+                glm::vec3 df = sdgArc(toClipSpace(glm::vec2(x, y), width, height),  glm::vec2(0.7, 0.3), -0.8, 0.3);
+                glm::vec2 v = turnNinetyDegrees(glm::vec2(df.y, df.z));
+                if (df.x <= 0){
+                    v = glm::vec2(df.y, df.z);
+                }
+
+                return std::make_tuple(a * v.x, a * v.y);
+                };
+        break;
 
     }
 
