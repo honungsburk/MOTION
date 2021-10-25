@@ -15,11 +15,11 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include "CmdOptions.hpp"
-#include "ImageSequencer.hpp"
+#include "ScreenShooter.hpp"
 #include "VideoCapture.hpp"
 #include "VectorFieldFunctions.hpp"
 
-#include <random>
+#include <boost/random.hpp>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -155,24 +155,23 @@ int main(int argc, char **argv)
     // ------------------------------------
     std::vector<float> particles;
 
-    std::random_device rd;
-    std::mt19937 gen(rd()); // seed the generator
-    std::uniform_real_distribution<> initPlace(-1.0f, 1.0f);
+    // To be able to reproduce a video we make sure to use a known seed
+    // so that all particles get initalized to the exact same locations.
+    boost::mt19937 rng(1000);    
+    boost::uniform_real<> placeDistribution(-1.0f, 1.0f);
+    boost::variate_generator<boost::mt19937&, boost::uniform_real<> >
+           rngPlace(rng, placeDistribution); 
 
-    // When looping we create a twice as long simulation but with
-    // the particles linearly increase/decrease to be overlayed on top of another.
-    // This creates the effect of perfect loop since there is no break.
-    std::uniform_real_distribution<> loopDelay(0.0f, cmdOptions.fps * cmdOptions.lengthInSeconds); // define the range
     float timeToLive = cmdOptions.fps * cmdOptions.lengthInSeconds;
 
     for(int i = 0; i < cmdOptions.nbr_particles; i++){
 
         // Start position
-        particles.push_back(initPlace(gen));
-        particles.push_back(initPlace(gen));
+        particles.push_back(rngPlace());
+        particles.push_back(rngPlace());
 
         // Loop
-        particles.push_back(loopDelay(gen));
+        particles.push_back(0.0f); // looping isn't used anymore...
         particles.push_back(timeToLive);
 
         // Color
@@ -333,6 +332,10 @@ int main(int argc, char **argv)
     unsigned int pingPongFBOIndex = 0;
     unsigned int frameNbr = 0;
 
+
+    ScreenShooter screenShooter;
+    unsigned int frameToScreenShot = cmdOptions.fps * cmdOptions.screenshotDelay;
+
     // render loop
     // -----------
     if (!cmdOptions.record){
@@ -360,14 +363,21 @@ int main(int argc, char **argv)
 
             pingPongFBOIndex = outTexture;
 
+
             frameNbr += 1;
+
+            // Screenshot
+            //---------------------------------
+            if(frameToScreenShot == frameNbr && cmdOptions.screenshot){
+                screenShooter.screenshot(cmdOptions.screenshotFileName.c_str(), cmdOptions.width(), cmdOptions.height());
+            }
         }
     } else {
         VideoCapture videoCapture( cmdOptions.outFileName.c_str()
                         , cmdOptions.width()
                         , cmdOptions.height()
                         , cmdOptions.fps
-                        , cmdOptions.bitrate
+                        , 8000000
                         , cmdOptions.crf 
                         , cmdOptions.preset 
                         , cmdOptions.tune
@@ -402,6 +412,11 @@ int main(int argc, char **argv)
             //---------------------------------------------------------
             if(numberOfFramesToDelay < frameNbr){
                 videoCapture.recordFrame();
+            }
+            // Screenshot
+            //---------------------------------
+            if(frameToScreenShot == frameNbr && cmdOptions.screenshot){
+                screenShooter.screenshot(cmdOptions.screenshotFileName.c_str(), cmdOptions.width(), cmdOptions.height());
             }
         }
 

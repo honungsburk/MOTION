@@ -64,10 +64,14 @@ public:
     unsigned int lengthInSeconds;
     unsigned int delayInSeconds;
     std::string outFileName = "";
-    unsigned int bitrate;
     unsigned int crf;
     std::string preset = "";
     std::string tune = "";
+
+    // Screenshot
+    bool screenshot;
+    std::string screenshotFileName = "";
+    unsigned int screenshotDelay;
 
 
     options_description cmdline_options{"Motion Options"};
@@ -279,17 +283,23 @@ public:
         // ----------------------------------------------------------------------------------------
 
         if (vm.count("record")){
-            record = true;
-            outFileName = vm["record"].as<std::string>();   
+            outFileName = vm["record"].as<std::string>(); 
+            if(hasEnding(outFileName, ".png")){
+                record = true;
+            } else {
+                std::cout 
+                << "WARNING: '--record "
+                << outFileName
+                << "' the filename must end with '.mp4'" 
+                << std::endl;
+                failed = true;
+            }
         }
         else 
             record = false;
 
         if(vm.count("fps"))
             fps = vm["fps"].as<unsigned int>();
-
-        if(vm.count("bitrate"))
-            bitrate = vm["bitrate"].as<unsigned int>();
 
         if(vm.count("length"))
             lengthInSeconds = vm["length"].as<unsigned int>();
@@ -354,6 +364,31 @@ public:
             }
         }
 
+
+        // Screenshot
+        // ----------------------------------------------------------------------------------------
+        if (vm.count("screenshot")){
+            screenshotFileName = vm["screenshot"].as<std::string>();
+            if(hasEnding(screenshotFileName, ".png")){
+                screenshot = true;
+            } else {
+                std::cout 
+                << "WARNING: '--screenshot "
+                << screenshotFileName
+                << "' the filename must end with '.png'" 
+                << std::endl;
+                failed = true;
+            }
+
+        }
+        else 
+            record = false;
+
+        if(vm.count("screenshot-delay"))
+            screenshotDelay = vm["screenshot-delay"].as<unsigned int>();
+
+
+
         // WARNINGS
         // ----------------------------------------------------------------------------------------
 
@@ -390,8 +425,9 @@ private:
     void init(){
         options_description generic{"Generic"};
         options_description simulation{"Simulate"};
-        options_description recording{"Record"};
         options_description color{"Color"};
+        options_description recording{"Record"};
+        options_description screenshot{"Screenshot"};
 
         generic.add_options()
             ("help", "Help screen")
@@ -414,8 +450,8 @@ private:
             
         color.add_options()
             ("color-mode", value<std::string>()->default_value("basic"), "Choose which color mode: basic or angle")
-            ("particle-color", value<std::string>()->default_value("ffffff"), "Particle Color as 'ffffff'")
-            ("background-color", value<std::string>()->default_value("000000"), "Background Color as '000000'")
+            ("particle-color", value<std::string>()->default_value("ffffff"), "Particle color as a RGB hex")
+            ("background-color", value<std::string>()->default_value("000000"), "Background color as a RGB hex")
             ("background-alpha", value<float>()->default_value(1.0), "Background alpha value between 0.0-1.0")
             ("cos-color-base", value<std::vector<float>>()->multitoken(), "The base which we oscillate around")
             ("cos-color-amplitude", value<std::vector<float>>()->multitoken(), "The amplitude of the cos color component ")
@@ -423,21 +459,32 @@ private:
             ("cos-color-offset", value<std::vector<float>>()->multitoken(), "The offsets for the red, green, and blue components when using cos coloring")
             ("cos-angle-offset", value<std::vector<float>>()->multitoken(), "The angle/position the angle is computed against");
 
+        screenshot.add_options()
+            ("screenshot", value<std::string>(), "Name of the output file to store the screenshot (as a png)")
+            ("screenshot-delay", value<unsigned int>()->default_value(1), "The number of seconds before the screenshot is taken.");
+
         recording.add_options()
-            ("record", value<std::string>(), "If the program should record and the name of the output file (Note that we are using HVEC encoding)")
+            ("record", value<std::string>(), "The output video filename (we are using H264 encoding and file must end in '.mp4')")
             ("fps", value<unsigned int>()->default_value(30), "The number of frames per second when recording")
             ("length", value<unsigned int>()->default_value(10), "The length of the recording in seconds")
             ("delay", value<unsigned int>()->default_value(0), "The number of seconds to delay before recording starts")
-            ("crf", value<unsigned int>()->default_value(28),"The CRF value: 0–51")
+            ("crf", value<unsigned int>()->default_value(23),"The CRF value: 0–51")
             ("preset", value<std::string>()->default_value("slow"),"The ffmpeg preset: 'ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow' , 'slower', 'veryslow'")
-            ("tune", value<std::string>()->default_value("animation"),"The ffmpeg tune: 'film', 'animation', 'grain', 'stillimage', 'fastdecode', 'zerolatency'")
-            ("bitrate", value<unsigned int>()->default_value(8000000),"The bitrate with which to encode the video");
+            ("tune", value<std::string>()->default_value("animation"),"The ffmpeg tune: 'film', 'animation', 'grain', 'stillimage', 'fastdecode', 'zerolatency'");
 
 
-        cmdline_options.add(generic).add(simulation).add(color).add(recording);
+        cmdline_options.add(generic).add(simulation).add(color).add(recording).add(screenshot);
 
         
-        config_file_options.add(simulation).add(color).add(recording);
+        config_file_options.add(simulation).add(color).add(recording).add(screenshot);
+    }
+
+    bool hasEnding (std::string const &fullString, std::string const &ending) {
+        if (fullString.length() >= ending.length()) {
+            return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+        } else {
+            return false;
+        }
     }
 
 
