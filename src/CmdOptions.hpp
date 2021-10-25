@@ -284,7 +284,7 @@ public:
 
         if (vm.count("record")){
             outFileName = vm["record"].as<std::string>(); 
-            if(hasEnding(outFileName, ".png")){
+            if(hasEnding(outFileName, ".mp4")){
                 record = true;
             } else {
                 std::cout 
