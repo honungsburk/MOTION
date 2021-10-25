@@ -130,13 +130,13 @@ int main(int argc, char **argv)
 
     // Build and compile our shader programs
     // ------------------------------------
-    Shader particleComputeShader("../shaders/particle.comp");
+    Shader particleComputeShader((cmdOptions.shaderPath + "/particle.comp").c_str());
     glCheckError(); 
-    Shader particleShader("../shaders/particle.vert", "../shaders/particle.frag");
+    Shader particleShader((cmdOptions.shaderPath +"/particle.vert").c_str(), (cmdOptions.shaderPath +"/particle.frag").c_str());
     glCheckError(); 
-    Shader postprocessingTrailShader( "../shaders/post-processing.vert", "../shaders/post-processing-trail.frag" );
+    Shader postprocessingTrailShader( (cmdOptions.shaderPath +"/post-processing.vert").c_str(), (cmdOptions.shaderPath + "/post-processing-trail.frag").c_str() );
     glCheckError(); 
-    Shader postprocessingShader( "../shaders/post-processing.vert", "../shaders/post-processing.frag" );
+    Shader postprocessingShader( (cmdOptions.shaderPath + "/post-processing.vert").c_str(), (cmdOptions.shaderPath + "/post-processing.frag").c_str() );
     glCheckError(); 
 
     // Vector Field
@@ -1123,16 +1123,7 @@ void processInput(GLFWwindow *window)
 // ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    // cmdOptions.width = width;
-    // cmdOptions.height = height;
-
-    // std::function<std::tuple<float, float>(float, float, float, float)> vectorFieldFn = createVectorFieldFn(cmdOptions.vector_field_function); 
-
-    // VectorField vectorField = createVectorField(cmdOptions.vectorGridWidth(), cmdOptions.vectorGridHeight(), vectorFieldFn);
-
-    // updateParticleSystem(pSystem, vectorField);
-    // make sure the viewport matches the new window dimensions; note that width and 
-    // height will be significantly larger than specified on retina displays.
+    // We don't update shit because it fucks with the simulation.
     glViewport(0, 0, cmdOptions.width(), cmdOptions.height());
 }
 

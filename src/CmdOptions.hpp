@@ -26,6 +26,7 @@ public:
     // Generic
     bool show_help;
     bool show_version;
+    std::string shaderPath = "";
 
     // Simulations
 
@@ -96,8 +97,10 @@ public:
         store(parse_command_line(argc, argv, cmdline_options), vm);
 
         if (vm.count("config")){
-            std::string filename = vm["config"].as<std::string>();
-            store(parse_config_file(filename.c_str(), config_file_options), vm);
+            std::vector<std::string> filenames = vm["config"].as<std::vector<std::string>>();
+            for(std::string filename : filenames) {
+                store(parse_config_file(filename.c_str(), config_file_options), vm);
+            }
         }
 
         notify(vm);
@@ -115,6 +118,10 @@ public:
             show_version = true;
         else 
             show_version = false;
+
+        if (vm.count("shader-path"))
+            shaderPath = vm["shader-path"].as<std::string>();
+    
 
         // Resolution
         // ----------------------------------------------------------------------------------------
@@ -432,7 +439,8 @@ private:
         generic.add_options()
             ("help", "Help screen")
             ("version,v", "Print version string")
-            ("config", value<std::string>(), "File containing command line options");
+            ("config", value<std::vector<std::string>>()->multitoken(), "Files containing command line options")
+            ("shader-path", value<std::string>()->default_value("./shaders"), "The folder where the shaders are located");
 
         simulation.add_options()
             ("width-ratio, w", value<unsigned int>()->default_value(16), "Width-Ratio like 16 in 16:9")

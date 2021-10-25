@@ -1,6 +1,5 @@
 # Motion
 
-
 ## Installation
 
 Most dependencies are installed by conan but some need to exist on your system:
@@ -31,3 +30,9 @@ the `--help` command.
 ```bash
 ./build/bin/VectorFieldParticleSystem --help
 ```
+
+## Debug
+
+### Help the screen is black?!?!
+
+You probably specified the `--shader-path` option incorrectly.
