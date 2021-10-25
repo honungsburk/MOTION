@@ -86,7 +86,7 @@ public:
         // Video Stream
 
         /* find the encoder */
-        AVCodecID codec_id = AV_CODEC_ID_HEVC;
+        AVCodecID codec_id = AV_CODEC_ID_H264;
         codec = avcodec_find_encoder(codec_id);
         if (!codec) {
             char buffer[50];
