@@ -1,0 +1,6 @@
+length = 30
+fps = 30
+preset = medium
+crf = 33
+pixels-per-ratio = 120
+screenshot-delay =3
