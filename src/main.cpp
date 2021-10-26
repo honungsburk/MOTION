@@ -339,7 +339,7 @@ int main(int argc, char **argv)
     // render loop
     // -----------
     if (!cmdOptions.record){
-        while (!glfwWindowShouldClose(window))
+        while (!glfwWindowShouldClose(window) && numberOfFramesToRecord != frameNbr)
         {
             unsigned int inTexture = pingPongFBOIndex;
             unsigned int outTexture = (pingPongFBOIndex + 1) % 2;

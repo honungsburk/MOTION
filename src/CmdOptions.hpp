@@ -389,7 +389,7 @@ public:
 
         }
         else 
-            record = false;
+            screenshot = false;
 
         if(vm.count("screenshot-delay"))
             screenshotDelay = vm["screenshot-delay"].as<unsigned int>();
