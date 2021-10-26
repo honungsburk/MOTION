@@ -8,21 +8,45 @@ nfts_path = "./nfts"
 output_path = "./nft-videos"
 
 def runVideoProcess(name):
+
+    tmpVideo = output_path + '/' + name + '-temp.mp4'
+    video = output_path + '/' + name + '.mp4'
     videoCommand = ' '.join(
             [ './build/bin/VectorFieldParticleSystem'
             , '--config MOTION-record'
             , '--config'
             , nfts_path + '/' + name
             , '--record' 
-            , output_path + '/' + name + '.mp4'
+            , tmpVideo
             , '--screenshot'
             , output_path + '/' + name + '.png'
-            ])
-    return subprocess.run( videoCommand
-                         , stderr=subprocess.STDOUT
-                         , shell=True
-                         , check=True
-                         )
+            ])  
+    audioCommand = ' '.join(
+        [ 'ffmpeg'
+        ,'-i'
+        , tmpVideo
+        ,'-i audio/noise.wav'
+        ,'-map 0:v -map 1:a -c:v copy -shortest'
+        , video
+        ]
+    )
+    removeTmpCommand = 'rm ' + tmpVideo
+
+    subprocess.run( videoCommand
+                    , stderr=subprocess.STDOUT
+                    , shell=True
+                    , check=True
+                    )
+    subprocess.run( audioCommand
+                    , stderr=subprocess.STDOUT
+                    , shell=True
+                    , check=True
+                    )
+    subprocess.run( removeTmpCommand
+                    , stderr=subprocess.STDOUT
+                    , shell=True
+                    , check=True
+                    )
 
 
 
