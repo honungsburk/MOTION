@@ -1,4 +1,8 @@
-# Motion
+# MOTION
+
+MOTION is a generative art project by Frank Hampus Weslien on the Cardano blockchain.
+It explores the use of particle simulation in a 2D vector fields to create a 
+program for rapid creation artworks. 
 
 ## Installation
 
@@ -83,6 +87,16 @@ The file depends on three things.
 1. That you have a python3 installation
 2. ffmpeg
 3. The 'rm' command available on linux
+
+
+## Creating new simulations
+
+Colors, particle size, and etc can easily be mixed and matched checkout the 
+`--help` command for all available options. If you want to create your own vector fields
+you unfortunately have to modify the source code and recompile.
+Look for the function called `createVectorFieldFn(..)`
+there you will find a ridiculously large switch statement to which you can add new functions. 
+
 
 ## FAQ
 
