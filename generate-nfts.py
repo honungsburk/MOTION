@@ -9,35 +9,66 @@ output_path = "./nft-videos"
 
 def runVideoProcess(name):
 
-    tmpVideo = output_path + '/' + name + '-temp.mp4'
+    tmpVideo = output_path + '/' + name + '-raw.mp4'
     video = output_path + '/' + name + '.mp4'
-    videoCommand = ' '.join(
+    screenshotCommand = ' '.join(
             [ './build/bin/VectorFieldParticleSystem'
-            , '--config MOTION-record'
+            , '--config'
+            , nfts_path + '/' + name
+            , '--screenshot'
+            , output_path + '/' + name + '.png'
+            , '--length 4'
+            , '--fps 30'
+            , '--pixels-per-ratio 120'
+            ])
+    videoRawCommand = ' '.join(
+            [ './build/bin/VectorFieldParticleSystem'
             , '--config'
             , nfts_path + '/' + name
             , '--record' 
             , tmpVideo
-            , '--screenshot'
-            , output_path + '/' + name + '.png'
-            ])  
-    audioCommand = ' '.join(
-        [ 'ffmpeg'
-        ,'-i'
+            , '--length 30'
+            , '--fps 30'
+            , '--preset ultrafast'
+            , '--crf 18'
+            , '--pixels-per-ratio 120'
+            ])
+    firstPassCommand = ' '.join(
+        [ 'ffmpeg -y -i'
         , tmpVideo
-        ,'-i audio/noise.wav'
-        ,'-map 0:v -map 1:a -c:v copy -shortest'
+        , '-c:v libx264 -b:v 22000k -pass 1 -an -f null /dev/null'
+        ]
+    )
+    secondPassCommand = ' '.join(
+        [ 'ffmpeg' 
+        , '-i'
+        , tmpVideo
+        , '-i audio/noise.wav -shortest'
+        , '-c:v libx264 -b:v 22000k -pass 2'
         , video
         ]
     )
     removeTmpCommand = 'rm ' + tmpVideo
 
-    subprocess.run( videoCommand
+    # This was made as a seperate call because otherwise it fails 
+    # to save the entire image
+    subprocess.run( screenshotCommand
                     , stderr=subprocess.STDOUT
                     , shell=True
                     , check=True
                     )
-    subprocess.run( audioCommand
+    print(videoRawCommand)
+    subprocess.run( videoRawCommand
+                    , stderr=subprocess.STDOUT
+                    , shell=True
+                    , check=True
+                    )
+    subprocess.run( firstPassCommand
+                    , stderr=subprocess.STDOUT
+                    , shell=True
+                    , check=True
+                    )
+    subprocess.run( secondPassCommand
                     , stderr=subprocess.STDOUT
                     , shell=True
                     , check=True

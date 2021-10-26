@@ -10,10 +10,16 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/bin/VectorFieldParticleSystem",
             "args": [
-                "--config", "../configs/config-1",
+                "--config", "./nfts/MOTION-122",
+                "--record","./nft-videos/MOTION-122-raw.mp4",
+                "--length", "30",
+                "--fps", "30",
+                "--preset", "ultrafast",
+                "--crf", "18",
+                "--pixels-per-ratio", "120"
             ],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
