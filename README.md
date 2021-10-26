@@ -7,6 +7,11 @@ Most dependencies are installed by conan but some need to exist on your system:
 libva-dev
 libswscale-dev
 
+### Warning
+
+The program has only been compiled and used on ubuntu 20.04. If you try to compile
+on another platform (most notably Windows or Mac) you might not work...
+
 ## Compiling steps
 
 You find all the compiling steps in `./build-debug.sh`. Either execute them one by
