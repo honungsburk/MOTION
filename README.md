@@ -2,6 +2,13 @@
 
 ## Installation
 
+### Install c++ and conan
+
+Make sure that you have c++ installed. 
+Conan is a package manager for c++ that you can install via their [website](https://conan.io/)
+
+### install program dependencies
+
 Most dependencies are installed by conan but some need to exist on your system:
 
 libva-dev
