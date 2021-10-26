@@ -1,11 +1,12 @@
 vector-field-function = 9
 probability-to-die = 0.1
-trail-mix-rate = 0.8 
+trail-mix-rate = 0.8
+speed = 0.5
 width-ratio = 16 
 height-ratio = 9 
 pixels-per-ratio = 120
 vectors-per-ratio = 4
-point-size = 1.0 
+point-size = 2.0 
 nbr-particles = 102400
 particle-color = 2D8FF9
 background-color = 251A20
