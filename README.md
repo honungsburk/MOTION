@@ -39,7 +39,13 @@ the `--help` command.
 ## Generating a the NFT collection
 
 If you want to generate the entire NFT collection from scratch I'd advice you to use
-the command `python3 generate-nfts.py`. You will have to have python3 installed for it to work.
+the command `python3 generate-nfts.py`. 
+
+The file depends on three things.
+
+1. That you have a python3 installation
+2. ffmpeg
+3. The 'rm' command available on linux
 
 
 ## FAQ
