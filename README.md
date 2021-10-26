@@ -30,6 +30,7 @@ Run  `./build-debug.sh` after installing conan.
 #### Linux
 
 Conan will most likely complain about these packages missing:
+
 * libgl-dev
 * libva-dev
 * libvdpau-dev
