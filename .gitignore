@@ -7,3 +7,4 @@ audio/
 *.jpeg
 live-encoding/
 *.patch
+*.log*
