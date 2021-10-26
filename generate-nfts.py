@@ -50,7 +50,8 @@ def runVideoProcess(name):
     )
     removeTmpCommand = 'rm ' + tmpVideo
 
-
+    # This was made as a seperate call because otherwise it fails 
+    # to save the entire image
     subprocess.run( screenshotCommand
                     , stderr=subprocess.STDOUT
                     , shell=True
