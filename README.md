@@ -2,17 +2,42 @@
 
 ## Installation
 
-### Install c++ and conan
+### Install c++, conan, and cmake
 
 Make sure that you have c++ installed. 
 Conan is a package manager for c++ that you can install via their [website](https://conan.io/)
 
+
+### Change compiler version
+Conan uses by default a backwards compatible version of c++ that doesn't work with the `boost` library
+so we have to change that by using changing to line
+
+```txt
+compiler.libcxx=libstdc++
+```
+
+to
+
+```txt
+compiler.libcxx=libstdc++11
+```
+in `~/.conan/profiles/default`
+
 ### install program dependencies
 
-Most dependencies are installed by conan but some need to exist on your system:
+Run  `./build-debug.sh` after installing conan.
 
-libva-dev
-libswscale-dev
+#### Linux
+
+Conan will most likely complain about these packages missing:
+* libgl-dev
+* libva-dev
+* libvdpau-dev
+
+You will need to install them system wide. On ubuntu use `sudo apt-get install libgl-dev libva-dev libvdpau-dev`
+
+
+
 
 ### Warning
 
@@ -26,16 +51,18 @@ one or run the script directly.
 
 ## Running the program
 
-When the program is compiled you can use it
+When the program is compiled you view one of the nfts like so:
+
+```bash
+./build/bin/VectorFieldParticleSystem --config ./nfts/MOTION-3
+```
+
 to generate videos like so:
 
 
 ```bash
-./build/bin/VectorFieldParticleSystem --config MOTION-record --config ./nfts/MOTION-1 --record example.mp4 --screenshot example.png
+./build/bin/VectorFieldParticleSystem --config ./nfts/MOTION-3 --record MOTION-3.mp4 --length 30 --fps 30 --preset medium --crf 30 --pixels-per-ratio 120
 ```
-
-to generate the same video and thumbnail as used in the MOTION-1 nft.
-
 If you want to change any parameter (such as increasing the resolution) check out
 the `--help` command.
 
@@ -43,10 +70,12 @@ the `--help` command.
 ./build/bin/VectorFieldParticleSystem --help
 ```
 
+Note that any argument given on the terminal will have priority over what is specified in the config.
+
 ## Generating a the NFT collection
 
 If you want to generate the entire NFT collection from scratch I'd advice you to use
-the command `python3 generate-nfts.py`. 
+the command `python3 generate-nfts.py`. (Warning: rendering all videos will take a few hours)
 
 The file depends on three things.
 
@@ -54,8 +83,20 @@ The file depends on three things.
 2. ffmpeg
 3. The 'rm' command available on linux
 
-
 ## FAQ
+
+## What the hell is width-ratio, height-ratio, pixels-per-ratio, and vector-per-ratio?
+
+It just a way to easily change the resolution and underlying vector field. 
+
+if you use `--width-ratio 16` and `--height-ratio 9` then `--pixels-per-ratio 80` will be 1280px by 720px and
+`--pixels-per-ratio 120` will be 1920px by 1080px.  
+
+## Why is the simulation on using the bottom left part of my screen?
+
+You can not change the resolution of the simulation when it is created but the 
+window that is displaying it can still be resized. If you use a higher resolution for the simulation
+you will be able to fit the entire screen. 
 
 ## Why can I not create images/videos larger then my screen resolution?
 
