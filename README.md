@@ -96,6 +96,14 @@ Look for the function called `createVectorFieldFn(..)`
 there you will find a ridiculously large switch statement to which you can add new functions. 
 
 
+## Licensing
+
+The code is licensed under GPLv3 but the NFTs (data created from the algorithm)
+are subject to the NFT-license. If you change this software and generate your own
+images/videos those licenses will not apply to those works. You are free to do
+what ever you want with them.
+
+
 ## FAQ
 
 ## What the hell is width-ratio, height-ratio, pixels-per-ratio, and vector-per-ratio?
