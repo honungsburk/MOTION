@@ -10,6 +10,7 @@ program for rapid creation artworks.
 
 Make sure that you have c++ installed. 
 Conan is a package manager for c++ that you can install via their [website](https://conan.io/)
+You must also install cmake.
 
 
 ### Change compiler version
@@ -40,9 +41,6 @@ Conan will most likely complain about these packages missing:
 * libvdpau-dev
 
 You will need to install them system wide. On ubuntu use `sudo apt-get install libgl-dev libva-dev libvdpau-dev`
-
-
-
 
 ### Warning
 
