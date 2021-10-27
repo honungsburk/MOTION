@@ -7,17 +7,23 @@ shader_path = "./shaders"
 nfts_path = "./nfts"
 output_path = "./nft-videos"
 
-def runVideoProcess(name):
+def runVideoProcess(name, shouldScreenshot, shouldVideoCapture):
 
     tmpVideo = output_path + '/' + name + '-raw.mp4'
     video = output_path + '/' + name + '.mp4'
+
+    length = '--length 30'
+    if name == 'MOTION-3':
+        length = '--length 59'
+
     screenshotCommand = ' '.join(
             [ './build/bin/VectorFieldParticleSystem'
             , '--config'
             , nfts_path + '/' + name
             , '--screenshot'
             , output_path + '/' + name + '.png'
-            , '--length 4'
+            , '--screenshot-delay 10'
+            , '--length 11'
             , '--fps 30'
             , '--pixels-per-ratio 120'
             ])
@@ -27,7 +33,7 @@ def runVideoProcess(name):
             , nfts_path + '/' + name
             , '--record' 
             , tmpVideo
-            , '--length 30'
+            , length
             , '--fps 30'
             , '--preset ultrafast'
             , '--crf 18'
@@ -50,42 +56,43 @@ def runVideoProcess(name):
     )
     removeTmpCommand = 'rm ' + tmpVideo
 
-    # This was made as a seperate call because otherwise it fails 
+    # This was made as a separate call because otherwise it fails 
     # to save the entire image
-    subprocess.run( screenshotCommand
-                    , stderr=subprocess.STDOUT
-                    , shell=True
-                    , check=True
-                    )
-    print(videoRawCommand)
-    subprocess.run( videoRawCommand
-                    , stderr=subprocess.STDOUT
-                    , shell=True
-                    , check=True
-                    )
-    subprocess.run( firstPassCommand
-                    , stderr=subprocess.STDOUT
-                    , shell=True
-                    , check=True
-                    )
-    subprocess.run( secondPassCommand
-                    , stderr=subprocess.STDOUT
-                    , shell=True
-                    , check=True
-                    )
-    subprocess.run( removeTmpCommand
-                    , stderr=subprocess.STDOUT
-                    , shell=True
-                    , check=True
-                    )
+    if shouldScreenshot:
+        subprocess.run( screenshotCommand
+                        , stderr=subprocess.STDOUT
+                        , shell=True
+                        , check=True
+                        )
+    if shouldVideoCapture:
+        subprocess.run( videoRawCommand
+                        , stderr=subprocess.STDOUT
+                        , shell=True
+                        , check=True
+                        )
+        subprocess.run( firstPassCommand
+                        , stderr=subprocess.STDOUT
+                        , shell=True
+                        , check=True
+                        )
+        subprocess.run( secondPassCommand
+                        , stderr=subprocess.STDOUT
+                        , shell=True
+                        , check=True
+                        )
+        subprocess.run( removeTmpCommand
+                        , stderr=subprocess.STDOUT
+                        , shell=True
+                        , check=True
+                        )
 
 
 
-def generate_nfts(start, end):
+def generate_nfts(start, end, shouldScreenshot, shouldVideoCapture):
     print("Generate NFTs in range: %d - %d" % (start, end))
     for x in range(start, end + 1):
         print("Generate NFT: MOTION-%d" % x)
-        runVideoProcess('MOTION-' + str(x))
+        runVideoProcess('MOTION-' + str(x), shouldScreenshot, shouldVideoCapture)
 
 
 if __name__ == "__main__":
@@ -95,7 +102,10 @@ if __name__ == "__main__":
                         help='start index when generating nfts (inclusive)')
     parser.add_argument('--end', metavar='INT', type=int, default=128,
                         help='end index when generating nfts (inclusive)')
-    
+    parser.add_argument('--video', action='store_true',
+                        help='If present you will render video')
+    parser.add_argument('--screenshot', action='store_true',
+                        help='If present you will take screenshots')
     args = parser.parse_args()
 
     if not(args.start <= args.end):
@@ -118,6 +128,6 @@ if __name__ == "__main__":
             os.mkdir(output_path)
             print ("Created the directory '%s'" % output_path)
         print ("Start generating the NFTs...")
-        generate_nfts(args.start, args.end)
+        generate_nfts(args.start, args.end, args.screenshot, args.video)
     except OSError:
         print ("Creation of the directory %s failed" % output_path)
