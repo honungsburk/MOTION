@@ -8,3 +8,6 @@ audio/
 live-encoding/
 *.patch
 *.log*
+nft-maker/
+cardano-nfts/
+thumbnails/
