@@ -1,0 +1,17 @@
+vector-field-function = 28
+probability-to-die = 0.0 
+trail-mix-rate = 0.8
+width-ratio = 16 
+height-ratio = 9 
+pixels-per-ratio = 120
+vectors-per-ratio = 1
+point-size = 2.0 
+nbr-particles = 1024000 
+particle-color = 000000
+background-color = ede3af
+cos-color-speed = 3.2 
+cos-color-speed = 1.2 
+cos-color-speed = 2.3 
+cos-color-offset = 1.0
+cos-color-offset = 2.0
+cos-color-offset = 8.0
